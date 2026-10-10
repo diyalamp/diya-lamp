@@ -2,7 +2,9 @@
 
 **Write a decision you can defend.**
 
-An open-source Java application for AI-assisted argument review in Notion. Identify claims, inspect evidence and assumptions, consider objections, and approve revisions.
+AI that helps you test your argument and sharpen your writing. In Notion. With evidence, explicit assumptions, and edits you approve.
+
+An open-source Java application for defensible writing: identify claims, inspect evidence and assumptions, consider objections, and revise with author approval. Inspired by the connection between clear writing and well-developed ideas. A review supports judgment; it does not certify truth.
 
 ## Current status
 
