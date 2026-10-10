@@ -1,0 +1,7 @@
+build/
+.env
+.env.*
+*.key
+*.pem
+.DS_Store
+.idea/
