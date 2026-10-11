@@ -4,7 +4,7 @@ import com.diyalamp.workflow.*;
 import com.diyalamp.notion.*;
 import com.diyalamp.report.ReviewReport;
 import com.diyalamp.local.*;
-import com.diyalamp.ai.HostedReviewer;
+import com.diyalamp.ai.CodexReviewer;
 import java.nio.file.*;
 import java.util.*;
 
@@ -32,7 +32,7 @@ public final class Main {
             System.out.println("🪔 diyalamp | Defensible writing with AI in Notion.\n"
                 + "start <draft.txt> <session.review.properties>\nstatus <session>\n"
                 + "record <session> <result.txt> [questions.txt]\nrespond <session> <context.txt>\napprove <session>\n"
-                + "notion-read <page-id> <new-output-directory>\nreview <session> <claude-model-id>\nguide <session> <claude-model-id>\nexport <session> <new-report.md>\nnotion-publish <session> <parent-page-id>\npublication-status <session>\npublication-resolve <session> <created-review-page-id>\nAI review requires a separately billed Claude API key and explicit consent."); return;
+                + "notion-read <page-id> <new-output-directory>\nreview <session> [codex-model-id]\nguide <session> [codex-model-id]\nexport <session> <new-report.md>\nnotion-publish <session> <parent-page-id>\npublication-status <session>\npublication-resolve <session> <created-review-page-id>\nAI review uses your Codex CLI sign-in and requires explicit consent."); return;
         }
         if(args[0].equals("notion-read") && args.length==3) {
             String id=NotionClient.normalizeId(args[1]);
@@ -61,8 +61,8 @@ public final class Main {
             SessionStore.save(directory.resolve("session.review.properties"),saved);
             show(saved.review()); System.out.println("Notion draft imported locally. No Notion changes were made."); return;
         }
-        if(args[0].equals("guide") && args.length==3) {
-            guide(Path.of(args[1]),args[2]); return;
+        if(args[0].equals("guide") && (args.length==2 || args.length==3)) {
+            guide(Path.of(args[1]),args.length==3?args[2]:null); return;
         }
         if(args[0].equals("start") && args.length==3) {
             Path target=Path.of(args[2]);
@@ -110,24 +110,21 @@ public final class Main {
                 return;
             }
             case "review" -> {
-                require(args,3);
+                if(args.length!=2 && args.length!=3) throw new IllegalArgumentException("review requires a session and optional Codex model ID.");
+                String model=args.length==3?args[2]:null;
                 if(s.nextPhase().isEmpty() || s.state()==ReviewSession.State.NEEDS_INPUT)
                     throw new IllegalStateException("No review can run now; complete the required author input or approval step.");
                 if(!s.fingerprint().equals(ReviewSession.fingerprint(SessionStore.readText(saved.source()))))
                     throw new IllegalStateException("Source draft changed. Start a new session.");
                 java.io.Console console=System.console();
-                if(console==null) throw new IllegalStateException("Run in a terminal for consent and hidden API key entry.");
-                console.printf("Send this draft, completed reviews, and author context to Anthropic for %s using %s? API charges apply. One request, at most 4096 output tokens.\n",s.nextPhase().orElseThrow().label(),args[2]);
+                if(console==null) throw new IllegalStateException("Run in a terminal to confirm sending the draft to Codex.");
+                console.printf("Send this draft, completed reviews, and author context to Codex for %s using %s? Your Codex account usage and limits apply.\n",s.nextPhase().orElseThrow().label(),model==null?"the default Codex model":model);
                 if(!"SEND".equals(console.readLine("Type SEND to continue: "))) {
-                    System.out.println("Cancelled. No AI request or session change."); return;
+                    System.out.println("Cancelled. No Codex request or session change."); return;
                 }
-                char[] secret=secret("Claude API key (hidden): ");
-                if(secret==null) throw new IllegalStateException("Key entry cancelled.");
-                PhaseResult result;
-                try { result=HostedReviewer.claude(args[2],new String(secret)).review(s); }
-                finally { Arrays.fill(secret,'\0'); }
+                PhaseResult result=CodexReviewer.connect(model).review(s);
                 if(!s.fingerprint().equals(ReviewSession.fingerprint(SessionStore.readText(saved.source()))))
-                    throw new IllegalStateException("Source draft changed during review. Result was not applied; API charges may still apply.");
+                    throw new IllegalStateException("Source draft changed during review. Result was not applied; Codex usage may still have been consumed.");
                 s.submit(result);
             }
             case "record" -> {
@@ -185,7 +182,7 @@ public final class Main {
             if(action==null || action.trim().equals("quit")) return;
             try {
                 switch(action.trim()) {
-                    case "review" -> run(new String[]{"review",path.toString(),model});
+                    case "review" -> run(model==null?new String[]{"review",path.toString()}:new String[]{"review",path.toString(),model});
                     case "respond" -> {
                         console.printf("Enter author context. Type .end alone to finish, or .cancel to discard.\n");
                         StringBuilder context=new StringBuilder(); String line; boolean cancelled=false;

@@ -1,6 +1,6 @@
 package com.diyalamp.workflow;
 
-import com.diyalamp.ai.HostedReviewer;
+import com.diyalamp.ai.CodexReviewer;
 import com.diyalamp.notion.*;
 import com.diyalamp.local.SessionLock;
 import com.diyalamp.report.ReviewReport;
@@ -23,11 +23,10 @@ public final class ConnectedWorkflowTest {
             try(SessionLock lock=new SessionLock(session)) {
                 try { new SessionLock(session).close(); throw new AssertionError("Concurrent lock acquired"); } catch(IOException expected) { }
             }
-            HostedReviewer reviewer=new HostedReviewer("test-model",request->{
-                JsonObject input=JsonParser.parseString(request.getAsJsonArray("messages").get(0).getAsJsonObject().get("content").getAsString()).getAsJsonObject();
+            CodexReviewer reviewer=new CodexReviewer("test-model",(prompt,schema,model)->{
+                JsonObject input=JsonParser.parseString(prompt.substring(prompt.indexOf("Review input:\n")+"Review input:\n".length())).getAsJsonObject();
                 JsonObject result=new JsonObject(); result.addProperty("phase",input.get("phase").getAsString()); result.addProperty("output","Review artifact"); result.add("questions",new JsonArray());
-                JsonObject text=new JsonObject(); text.addProperty("type","text"); text.addProperty("text",result.toString()); JsonArray content=new JsonArray(); content.add(text);
-                JsonObject response=new JsonObject(); response.addProperty("stop_reason","end_turn"); response.add("content",content); return response;
+                return result.toString();
             });
             for(Phase p:Phase.values()) {
                 s.submit(reviewer.review(s)); SessionStore.save(session,new SessionStore.Saved(source,s)); s=SessionStore.load(session).review();
@@ -39,7 +38,7 @@ public final class ConnectedWorkflowTest {
                 check(request.getAsJsonArray("children").size()>0); JsonObject response=new JsonObject(); response.addProperty("id",block); return response;
             });
             check(publisher.publish(new NotionPublisher.Source(page,draft.revision(),draft.fingerprint()),s,page,"0123456789abcdef").equals(block));
-            System.out.println("PASS: full offline Notion import, five hosted-review contracts, restart, explicit approval, report, publication, and concurrent lock.");
+            System.out.println("PASS: full offline Notion import, five Codex-review contracts, restart, explicit approval, report, publication, and concurrent lock.");
         } finally { try(var paths=Files.walk(dir)) { for(Path p:paths.sorted(Comparator.reverseOrder()).toList()) Files.delete(p); } }
     }
     private static void check(boolean value) { if(!value) throw new AssertionError(); }
