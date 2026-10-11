@@ -2,6 +2,7 @@ package com.diyalamp;
 
 import com.diyalamp.workflow.*;
 import com.diyalamp.notion.NotionClient;
+import com.diyalamp.ai.HostedReviewer;
 import java.nio.file.*;
 import java.util.*;
 
@@ -16,7 +17,7 @@ public final class Main {
             System.out.println("🪔 diyalamp | Defensible writing with AI in Notion.\n"
                 + "start <draft.txt> <session.review.properties>\nstatus <session>\n"
                 + "record <session> <result.txt> [questions.txt]\nrespond <session> <context.txt>\napprove <session>\n"
-                + "notion-read <page-id> <new-output-directory>\nPhase results are supplied by you; no AI review yet."); return;
+                + "notion-read <page-id> <new-output-directory>\nreview <session> <claude-model-id>\nAI review requires a separately billed Claude API key and explicit consent."); return;
         }
         if(args[0].equals("notion-read") && args.length==3) {
             String id=NotionClient.normalizeId(args[1]);
@@ -54,6 +55,27 @@ public final class Main {
         Path path=Path.of(args[1]); SessionStore.Saved saved=SessionStore.load(path); ReviewSession s=saved.review();
         switch(args[0]) {
             case "status" -> { require(args,2); show(s); return; }
+            case "review" -> {
+                require(args,3);
+                if(s.nextPhase().isEmpty() || s.state()==ReviewSession.State.NEEDS_INPUT)
+                    throw new IllegalStateException("No review can run now; complete the required author input or approval step.");
+                if(!s.fingerprint().equals(ReviewSession.fingerprint(SessionStore.readText(saved.source()))))
+                    throw new IllegalStateException("Source draft changed. Start a new session.");
+                java.io.Console console=System.console();
+                if(console==null) throw new IllegalStateException("Run in a terminal for consent and hidden API key entry.");
+                console.printf("Send this draft, completed reviews, and author context to Anthropic for %s using %s? API charges apply. One request, at most 4096 output tokens.\n",s.nextPhase().orElseThrow().label(),args[2]);
+                if(!"SEND".equals(console.readLine("Type SEND to continue: "))) {
+                    System.out.println("Cancelled. No AI request or session change."); return;
+                }
+                char[] secret=console.readPassword("Claude API key (hidden): ");
+                if(secret==null) throw new IllegalStateException("Key entry cancelled.");
+                PhaseResult result;
+                try { result=HostedReviewer.claude(args[2],new String(secret)).review(s); }
+                finally { Arrays.fill(secret,'\0'); }
+                if(!s.fingerprint().equals(ReviewSession.fingerprint(SessionStore.readText(saved.source()))))
+                    throw new IllegalStateException("Source draft changed during review. Result was not applied; API charges may still apply.");
+                s.submit(result);
+            }
             case "record" -> {
                 if(args.length!=3 && args.length!=4) throw new IllegalArgumentException("record requires a result file and optional questions file.");
                 List<String> questions=args.length==4 ? SessionStore.readText(Path.of(args[3])).lines().filter(line->!line.isBlank()).toList() : List.of();

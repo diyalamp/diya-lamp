@@ -8,7 +8,7 @@ An open-source Java application for defensible writing: identify claims, inspect
 
 ## Current status
 
-Working local five-phase workflow, not a connected Notion product yet. Start a review from a rough draft, record phase results, answer evidence requests, and explicitly approve the unchanged source. Sessions survive restarts. Phase results are supplied manually in this milestone; the app performs no AI review. A read-only Notion importer is included; publishing reviews and the hosted-provider adapter are next.
+Working local five-phase workflow, not a connected Notion product yet. Start a review from a rough draft, record phase results, answer evidence requests, and explicitly approve the unchanged source. Sessions survive restarts. Phase results can be supplied manually or produced by the Claude API adapter. A read-only Notion importer is included; publishing reviews back to Notion is next. Both network adapters are tested offline, but have not yet been validated with live credentials.
 
 ## Run the workflow
 
@@ -24,6 +24,18 @@ java -jar build/diya-lamp.jar status .diyalamp/draft.review.properties
 Use `record <session> <result.txt> [questions.txt]` for the next phase. Questions are one per line. A phase with questions blocks until `respond <session> <context.txt>`; then record a new review of that same phase. After five results without outstanding questions, use `approve <session>`. Approval re-reads the original draft and rejects changed text. This marks the reviewed source Ready; it does not apply edits.
 
 Sessions contain private draft text and author context. Keep them in the ignored `.diyalamp/` directory. They are saved atomically with owner-only file permissions on macOS/Linux. Run `sh test.sh` to verify workflow and persistence guarantees.
+
+## Review with hosted AI
+
+```sh
+java -jar build/diya-lamp.jar review .diyalamp/draft.review.properties <claude-model-id>
+```
+
+Choose a model available in your Anthropic API account. The command explains what will be sent and requires typing `SEND`, then asks for the API key in a hidden terminal prompt. Claude chat subscriptions do not replace API billing. The key stays in memory and is never saved to a session or file. Run one phase at a time: inspect its output, answer requested evidence with `respond`, and run `review` again. Only explicit `approve` can mark the source Ready.
+
+Each request includes the draft, completed phase reviews, and supplied author context. It has no tools, no automatic retries, a 90-second request timeout, and a 4,096-output-token ceiling; that ceiling is not a total dollar budget. Refused, malformed, truncated, or wrong-phase results are rejected. Validation enforces the response format, not factual accuracy or immunity to prompt injection. Source changes before or during review prevent applying the result. An API timeout or rejected result can still incur provider charges. Sessions currently assume one writer at a time.
+
+The adapter uses the [Claude Messages API](https://platform.claude.com/docs/en/api/messages/create). OpenAI support, OS credential storage, and a live end-to-end test remain planned.
 
 ## Import from Notion
 
@@ -50,7 +62,7 @@ A rough draft moves through argument mapping, stress-testing, assumption checkin
 
 ## Credentials and privacy
 
-Provider API usage is billed separately from chat subscriptions. Do not put keys in Notion pages, source code, or command-line arguments. The planned setup will use a hidden credential prompt and the operating system credential store. Notion authorization is separate. No credentials are collected by the local workflow.
+Provider API usage is billed separately from chat subscriptions. Do not put keys in Notion pages, source code, or command-line arguments. The planned setup will use a hidden credential prompt and the operating system credential store. Notion authorization is separate. Credentials are requested only in hidden terminal prompts for explicit network commands, and are not persisted.
 
 Only submit selected documents to an AI provider with the user's authorization. Treat document contents as untrusted input, retain source attribution, and never invent supporting evidence.
 

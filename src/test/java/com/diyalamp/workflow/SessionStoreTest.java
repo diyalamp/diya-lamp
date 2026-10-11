@@ -14,6 +14,10 @@ public final class SessionStoreTest {
             s.submit(new PhaseResult(Phase.ARGUMENT_MAP,"Missing evidence",List.of("What supports the claim?")));
             SessionStore.save(file,new SessionStore.Saved(source,s));
             s=SessionStore.load(file).review(); check(s.state()==ReviewSession.State.NEEDS_INPUT);
+            String snapshot=Files.readString(file);
+            try { Main.run(new String[]{"review",file.toString(),"test-model"}); throw new AssertionError("Blocked review accepted"); }
+            catch(IllegalStateException expected) { }
+            check(Files.readString(file).equals(snapshot));
             s.respond("Synthetic evidence"); SessionStore.save(file,new SessionStore.Saved(source,s));
             s=SessionStore.load(file).review(); check(s.answered()); check(s.responses().get(Phase.ARGUMENT_MAP).equals("Synthetic evidence"));
             for(Phase p:Phase.values()) s.submit(new PhaseResult(p,"Checked "+p.label(),List.of()));
