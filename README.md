@@ -2,72 +2,139 @@
 
 **Defensible writing with AI in Notion.**
 
-AI that helps you test your argument and sharpen your writing. In Notion. With evidence, explicit assumptions, and edits you approve.
+A defined, sequential workflow for turning a rough draft into an examined argument. AI guides five phases; you supply missing evidence and explicitly approve the result. Notion holds your draft and the published review. A review supports judgment; it does not certify truth.
 
-An open-source Java application for defensible writing: identify claims, inspect evidence and assumptions, consider objections, and revise with author approval. Inspired by the connection between clear writing and well-developed ideas. A review supports judgment; it does not certify truth.
+## What works today
 
-## Current status
+This first CLI release imports a selected Notion page, runs one review phase at a time with the Claude API, pauses for author context, persists sessions, checks the source before approval, exports a readable report, and publishes an approved review as a separate Notion page. A guided terminal menu brings these actions together. It never automatically overwrites the source draft.
 
-Working local five-phase workflow, not a connected Notion product yet. Start a review from a rough draft, record phase results, answer evidence requests, and explicitly approve the unchanged source. Sessions survive restarts. Phase results can be supplied manually or produced by the Claude API adapter. A read-only Notion importer is included; publishing reviews back to Notion is next. Both network adapters are tested offline, but have not yet been validated with live credentials.
+The full path is tested with offline Notion and AI fixtures. Live account validation has not been performed. This is an unsigned CLI release, not a signed desktop application or a Notion-native plugin. OpenAI support and public Notion OAuth are future work.
 
-## Run the workflow
+## Quick start: fictional demo
 
-Requires JDK 21 or newer. The build downloads checksum-pinned Gson for JSON parsing. Keep `build/deps` alongside the executable JAR.
+Install **JDK 21 or newer**, and ensure `java` and `javac` are on your path, or set `JAVA_HOME` and add its `bin` directory to your path. The build uses `curl`, `shasum`, and `zip`, available on macOS and in the CI images.
 
 ```sh
 sh build.sh
-java -jar build/diya-lamp.jar --help
-java -jar build/diya-lamp.jar start examples/draft.txt .diyalamp/draft.review.properties
-java -jar build/diya-lamp.jar status .diyalamp/draft.review.properties
+sh run.sh --help
+sh run.sh start examples/onboarding/draft.txt .diyalamp/onboarding.review.properties
+sh run.sh guide .diyalamp/onboarding.review.properties <claude-model-id>
 ```
 
-Use `record <session> <result.txt> [questions.txt]` for the next phase. Questions are one per line. A phase with questions blocks until `respond <session> <context.txt>`; then record a new review of that same phase. After five results without outstanding questions, use `approve <session>`. Approval re-reads the original draft and rejects changed text. This marks the reviewed source Ready; it does not apply edits.
+Choose a model available in your Anthropic API account. Enter the API key into the hidden prompt, never into a command or a Notion page. Claude chat subscriptions do not include this app's API billing.
 
-Sessions contain private draft text and author context. Keep them in the ignored `.diyalamp/` directory. They are saved atomically with owner-only file permissions on macOS/Linux. Run `sh test.sh` to verify workflow and persistence guarantees.
+In the guided menu:
 
-## Review with hosted AI
+1. Choose `review`. Read the transmission notice, then type `SEND` to authorize that phase's request.
+2. Inspect the result. If evidence is missing, choose `respond`, enter your context, and type `.end` on its own line. `.cancel` discards the entry.
+3. Choose `review` again to re-examine the same phase. Answering a question does not automatically pass it.
+4. Continue through all five phases. Choose `approve` only after you have inspected the outputs.
+5. Choose `export` for a local report. A Notion-imported session can also use `publish`.
+
+Keys are reused in memory while the guided menu is open; quitting clears its credential cache. Every AI request still requires consent. Choose `keys` to clear the cache and replace an incorrect credential. On restart, enter the key again. No key is stored on disk.
+
+The [fictional walkthrough](examples/onboarding/README.md) explains the intended learning points. Start with its draft alone, then supply relevant parts of the separate evidence packet when asked. Model outputs vary; the walkthrough is not an expected-output script.
+
+## Connect your Notion draft
+
+Create a Notion integration with **read content** and **insert content** capabilities. Grant it access to the draft page and your chosen destination parent page. Use a text-focused draft page; linked child pages and databases are not imported.
 
 ```sh
-java -jar build/diya-lamp.jar review .diyalamp/draft.review.properties <claude-model-id>
+sh run.sh notion-read <draft-page-id> .diyalamp/notion-draft
+sh run.sh guide .diyalamp/notion-draft/session.review.properties <claude-model-id>
 ```
 
-Choose a model available in your Anthropic API account. The command explains what will be sent and requires typing `SEND`, then asks for the API key in a hidden terminal prompt. Claude chat subscriptions do not replace API billing. The key stays in memory and is never saved to a session or file. Run one phase at a time: inspect its output, answer requested evidence with `respond`, and run `review` again. Only explicit `approve` can mark the source Ready.
+Supply a Notion page ID, not its full URL. The importer requests the token in a hidden terminal prompt and creates a new private local directory. It reads paragraphs, headings, lists, checkboxes, toggles, quotes, callouts, code, and table rows, follows pagination and nested blocks, and records block references. Unsupported media blocks produce an error instead of being silently omitted. The page revision is checked before and after the import.
 
-Each request includes the draft, completed phase reviews, and supplied author context. It has no tools, no automatic retries, a 90-second request timeout, and a 4,096-output-token ceiling; that ceiling is not a total dollar budget. Refused, malformed, truncated, or wrong-phase results are rejected. Validation enforces the response format, not factual accuracy or immunity to prompt injection. Source changes before or during review prevent applying the result. An API timeout or rejected result can still incur provider charges. Sessions currently assume one writer at a time.
+The source is a local snapshot. Approval of an imported session re-reads the live Notion page and checks both revision and text fingerprint. If you edit the source, import a new session and repeat the review. Proposed revisions appear in the phase artifacts; the app does not apply them to the source. Ready means the author approved the reviewed source and its review, not that a suggested rewrite was automatically installed.
 
-The adapter uses the [Claude Messages API](https://platform.claude.com/docs/en/api/messages/create). OpenAI support, OS credential storage, and a live end-to-end test remain planned.
+## Publish the review
 
-## Import from Notion
-
-Create a Notion integration with read-content capability and grant it access to one test draft page. Run from a real terminal:
+After approval, choose `publish` in the guided menu and enter a destination parent page ID, or run:
 
 ```sh
-java -jar build/diya-lamp.jar notion-read <page-id> .diyalamp/notion-draft
+sh run.sh notion-publish .diyalamp/notion-draft/session.review.properties <parent-page-id>
 ```
 
-The parent `.diyalamp` directory must exist. Paste the integration token into the hidden prompt; it is used in memory and never saved. Supply a page ID, not a URL. The command imports paragraph, heading, list, checkbox, toggle, quote, callout, code, and table text, follows pagination and nested blocks, records block IDs, and checks the page revision before and after. Linked child pages/databases are excluded; unsupported media blocks fail explicitly. Nothing is written to Notion. The imported source is a local snapshot: local approval checks that snapshot, not the live Notion page. Live publication will require another source check.
+Type `PUBLISH` to confirm the destination. The app checks the original Notion page again, then creates one separate review page containing the reviewed source, all five phase outputs, supplied context, status, and source fingerprint. It makes no edits to the source blocks. Reports too large for one bounded create request must be exported locally.
 
-The connector is verified with offline fixtures. A live workspace connection has not yet been tested. API reference: [retrieve page](https://developers.notion.com/reference/retrieve-a-page), [retrieve block children](https://developers.notion.com/reference/get-block-children).
+A local receipt is saved before the write. Repeating a publication command is blocked, even if the request timed out. A timeout does not prove the page was not created.
 
-## Five review phases
+```sh
+sh run.sh publication-status <session>
+sh run.sh publication-resolve <session> <created-review-page-id>
+```
 
-A rough draft moves through argument mapping, stress-testing, assumption checking, decision framing, and final structure. Missing evidence returns to the author; completing the phases still requires author approval before Ready. See [the implementation plan](docs/PLAN.md).
+For a pending receipt, look in the destination for the page whose title includes the receipt's reference. `publication-resolve` verifies the page's parent and title, then records its ID without creating another page. If you cannot establish what happened, keep the pending receipt and investigate before retrying. Do not casually remove it. Source checking and page creation are separate API requests, so a source edit between them remains possible; the report preserves the exact reviewed fingerprint.
 
-## First connected milestone
+## Five phases
 
-1. Read a user-authorized Notion draft and record its revision.
-2. Use a hosted AI provider to return structured claims, evidence gaps, objections, and suggested edits.
-3. Publish a separate review page in Notion. Never overwrite the source automatically.
-4. Let the author provide evidence and approve individual changes; reject writes against stale revisions.
+| Phase | Purpose | Method behind it |
+| --- | --- | --- |
+| Map the argument | Separate claims, evidence, assumptions, and limits | Toulmin's argument model |
+| Stress-test the proposal | Explore objections, alternatives, and failure causes | Klein's premortem |
+| Question assumptions | Examine certainty, framing, and missing context | Kahneman and Tversky's bias research |
+| Frame the decision | Define alternatives, reversibility, measures, and review conditions | Decision framing |
+| Structure the draft | Lead with the recommendation and group support | Minto's Pyramid Principle |
 
-## Credentials and privacy
+These sources inform our workflow; the combined product is not a scientifically validated truth test. An empty question list is the model's judgment, not proof that all relevant facts are known.
 
-Provider API usage is billed separately from chat subscriptions. Do not put keys in Notion pages, source code, or command-line arguments. The planned setup will use a hidden credential prompt and the operating system credential store. Notion authorization is separate. Credentials are requested only in hidden terminal prompts for explicit network commands, and are not persisted.
+## Individual commands
 
-Only submit selected documents to an AI provider with the user's authorization. Treat document contents as untrusted input, retain source attribution, and never invent supporting evidence.
+| Command | Behavior |
+| --- | --- |
+| `start <draft.txt> <new-session>` | Create a local review snapshot |
+| `status <session>` | Inspect state, results, questions, and next phase |
+| `guide <session> <claude-model-id>` | Open the interactive menu |
+| `review <session> <claude-model-id>` | Request and validate one hosted review |
+| `record <session> <result.txt> [questions.txt]` | Supply a manual result; one question per line |
+| `respond <session> <context.txt>` | Supply author context without skipping a phase |
+| `approve <session>` | Approve the unchanged source after all phases |
+| `export <session> <new-report.md>` | Export results without editing the source |
+| `notion-read <page-id> <new-directory>` | Import a Notion draft and source metadata |
+| `notion-publish <session> <parent-page-id>` | Publish an approved, source-checked review |
+| `publication-status <session>` | Inspect the local write receipt |
+| `publication-resolve <session> <page-id>` | Reconcile an existing review page |
 
-## Design
+## Credentials, privacy, and failure behavior
 
-Core Java CLI → review workflow → provider adapter / Notion adapter. Version-aware review records and approval handling remain application responsibilities. Prompts are components, not the whole product.
+- Never put secrets in Notion pages, source code, examples, command arguments, logs, or Git. The app collects them only in hidden terminal prompts.
+- Runtime sessions contain private text and context. Keep them in `.diyalamp/`, which is ignored by Git. Export reports there too. Local source files outside that directory remain your responsibility.
+- The app uses owner-only permissions where supported. Session snapshots are saved atomically, and a process lock prevents concurrent commands from overwriting one session. It is not an encrypted vault.
+- An AI request sends the selected draft, completed reviews, and author context to Anthropic. There are no agent tools or automatic source edits. Document text is treated as untrusted input, but prompt-injection resistance and factual accuracy are not guaranteed.
+- Each AI call has a 4,096-output-token ceiling and a 90-second timeout. This is not a total dollar budget. Refused, interrupted, malformed, or wrong-phase responses do not advance the phase. Failed or discarded requests can still incur charges.
+- Network requests do not automatically retry. Notion rate-limit errors show a wait interval when provided. A failed publication keeps its receipt for reconciliation. Cancellation before a request leaves the session unchanged; quitting the terminal interrupts ongoing work, but remote work may already have happened.
 
-[Website](https://diyalamp.github.io/) · [Writing inspiration: Paul Graham](https://paulgraham.com/goodwriting.html)
+## Build, verify, and package
+
+```sh
+sh test.sh
+sh package.sh
+sh smoke-test.sh
+```
+
+The build downloads Gson 2.14.0 with a pinned SHA-256. Tests cover phase order, evidence gates, persistence, stale-source approval, malformed AI responses, pagination, source attribution, publication receipts, locks, and the entire connected path using offline fixtures. CI runs on Linux and macOS with Java 21.
+
+`package.sh` creates `build/release/diyalamp.zip`, containing the JAR, its dependency, scripts, example, documentation, and dependency license. Unzip it anywhere and use `sh run.sh`. On macOS, `diyalamp.command` opens the guide for an existing session. It is unsigned and still requires Java; a signed application with a bundled runtime is future work.
+
+## Troubleshooting
+
+| What you see | What to do |
+| --- | --- |
+| No terminal / private credential prompt unavailable | Run from Terminal or another terminal app, not a piped command |
+| Java is unavailable or too old | Install JDK 21+ and set `JAVA_HOME` / your command path |
+| Notion access failure | Share both pages with the integration and enable read/insert capabilities |
+| Source changed | Import or start a new session; completed results belong to the original snapshot |
+| Missing evidence | Supply context, then re-review the current phase |
+| Model/access/billing error | Confirm your API account and model ID; use `keys` to replace credentials |
+| Malformed or truncated review | Session remains unchanged; a deliberate retry can cost another API request |
+| Pending publication | Inspect the destination and use `publication-resolve`, never blindly repeat the write |
+| Session busy | Close the other command; an abandoned lock file itself does not keep an OS lock |
+
+## Architecture and next work
+
+Core Java CLI → five-phase workflow → Claude reviewer / Notion connector → review report. State and approval rules belong to the application, not the prompt. Sessions use a versioned local format; incompatible or damaged snapshots are rejected.
+
+See [the implementation plan](docs/PLAN.md) for completed release scope, live validation, and later work. OS credential storage, public OAuth, OpenAI support, per-edit application, larger publication batches, and signed desktop distribution are not included in this release.
+
+[Website](https://diyalamp.github.io/) · [Claude Messages API](https://platform.claude.com/docs/en/api/messages/create) · [Notion page API](https://developers.notion.com/reference/post-page) · [Notion block API](https://developers.notion.com/reference/get-block-children) · [Dependency notices](THIRD_PARTY_NOTICES.md)

@@ -1,42 +1,31 @@
 # 🪔 diyalamp implementation plan
 
-Defensible writing with AI in Notion. Java 21, a local CLI first, a simple desktop setup later.
+Defensible writing with AI in Notion. Java 21, guided CLI first.
 
-## Product workflow
+## First release: implemented
 
-The input is a rough draft, not a filled template. The five review phases are:
+- Typed five-phase workflow, missing-evidence gates, source fingerprints, and explicit author approval.
+- Persistent local sessions, context responses, report export, private files, and concurrent-session locks.
+- Notion import with pagination, nested text, block references, unsupported-content checks, and revision checks.
+- Claude hosted review with explicit transmission consent, hidden key entry, bounded output, and strict phase-result validation.
+- Guided terminal actions with in-memory credential reuse, inline author responses, and cancellation before requests.
+- Live Notion source checks before approval and publication; separate review pages, no source overwrites.
+- Durable publication receipts and reconciliation of uncertain writes without repeating the create request.
+- Packaged unsigned CLI with launcher, examples, dependency notices, and Linux/macOS CI.
+- Offline component and connected workflow tests. Each milestone is committed and pushed independently.
 
-1. Argument map: claims, grounds, connecting assumptions, qualifications, and gaps.
-2. Stress test: strongest objections, alternatives, and a premortem.
-3. Assumption check: questions about certainty, framing, and missing context.
-4. Decision frame: alternatives, reversibility, success measures, review dates, and conditions for changing course.
-5. Final structure: recommendation first, grouped support, evidence, uncertainties, and proposed revision.
+## Required live validation
 
-Each phase produces an inspectable artifact. Missing evidence pauses the workflow for author input, then the phase is reviewed again. Completing five phases yields Awaiting approval. Only the author can mark the draft Ready. Editing the source invalidates the completed review.
+Use a user-selected test page and destination with read/insert permissions, an Anthropic API key, and a model available in that account. Import a rough draft, run five phases with evidence responses, inspect and approve, publish separately, and verify the original source was not edited. This has not been performed with live credentials. Do not claim a production-ready or live-validated release until demonstrated.
 
-## Atomic implementation milestones
+## Later releases
 
-- Core workflow: typed phases and states, explicit evidence gates, source fingerprint, approval guard, offline tests.
-- Local CLI: start a session, inspect the current phase, record a phase result, supply context, and approve. Persist review artifacts locally, outside tracked files. This milestone is a workflow engine, not an AI reviewer.
-- Notion adapter: explicit page selection, pagination and nested text, block attribution, source-change detection, separate review page publication. No automatic source edits.
-- Hosted AI adapter: structured results for each phase, configurable model, bounded output, malformed/refused-response handling. Explicit consent to transmit the selected draft; no automatic provider spending.
-- Connected demo: rough draft → five reviewed artifacts with author responses → author approval → separate Notion review page. Verify offline first; live validation requires the user's credentials and chosen test page.
-- Setup: hidden credential prompts and OS credential storage; Notion authorization independent of AI authorization. Package and sign a macOS launcher.
+OS credential storage, OpenAI adapter, public Notion OAuth, signed macOS app with bundled runtime, richer block support, larger publication batches, safe read retry scheduling, release hosting, per-edit approvals and application, review provenance history, accessibility, and independent security review.
 
-Push each verified milestone separately. Do not claim the connected product works before it has been demonstrated.
-
-## Subsequent work
-
-Public Notion OAuth, provider choice, retries for safe reads, rate limits, cancellation, job recovery, idempotent publication, per-edit approval, source version history, expanded block coverage, accessibility, release automation, clean-install checks, and security review.
+These are future features, not hidden requirements for the first CLI release. Code signing and public OAuth additionally need account setup outside the repository.
 
 ## Correctness and privacy
 
-Never bundle keys or put them in Notion, examples, command arguments, logs, or Git. Use fake credentials in tests. Runtime artifacts can contain private drafts and must stay outside version control. API billing is separate from chat subscriptions.
+A review supports judgment, not proof of truth. Empty model questions do not establish that evidence is complete. Keys never belong in source, Notion, arguments, sessions, or fixtures. Runtime documents stay outside tracked files. API billing is separate from chat subscriptions.
 
-An AI review cannot prove truth or diagnose a writer's bias. Questions about evidence return to the author. Prompts and external documents are untrusted data. Notion's read-then-create check is not a transaction; disclose the race and retain source fingerprints.
-
-## References
-
-- https://developers.notion.com/reference/get-block-children
-- https://developers.notion.com/reference/post-page
-- https://platform.claude.com/docs/en/api/messages/create
+Notion source checks and page creation are separate requests. A write may succeed even when its response fails. Preserve reviewed fingerprints and pending receipts; never blindly repeat a publication.

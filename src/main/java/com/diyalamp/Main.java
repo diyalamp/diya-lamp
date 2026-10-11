@@ -180,7 +180,7 @@ public final class Main {
             ReviewSession s=SessionStore.load(path).review();
             console.printf("\n🪔 diyalamp: %s\n",s.state());
             s.nextPhase().ifPresent(p->console.printf("Next: %s\n",p.label()));
-            console.printf("Actions: review, respond, status, approve, export, publish, quit\n");
+            console.printf("Actions: review, respond, status, approve, export, publish, keys, quit\n");
             String action=console.readLine("Choose an action: ");
             if(action==null || action.trim().equals("quit")) return;
             try {
@@ -198,6 +198,7 @@ public final class Main {
                             SessionStore.Saved saved=SessionStore.load(path); saved.review().respond(context.toString()); SessionStore.save(path,saved);
                         }
                     }
+                    case "keys" -> { cache.values().forEach(value->Arrays.fill(value,'\0')); cache.clear(); console.printf("Cached credentials cleared. The next network action will ask again.\n"); }
                     case "status","approve" -> run(new String[]{action.trim(),path.toString()});
                     case "export" -> { String output=console.readLine("New report path: "); if(output!=null) run(new String[]{"export",path.toString(),output}); }
                     case "publish" -> { String parent=console.readLine("Destination parent page ID: "); if(parent!=null) run(new String[]{"notion-publish",path.toString(),parent}); }
