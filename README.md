@@ -34,7 +34,7 @@ In the guided menu:
 
 1. Choose `review`. Read the transmission notice, then type `SEND` to authorize that phase's request.
 2. Inspect the result. If evidence is missing, choose `respond`, enter your context, and type `.end` on its own line. `.cancel` discards the entry.
-3. Choose `review` again to re-examine the same phase. Answering a question does not automatically pass it.
+3. Choose `review` again to re-examine the same phase. Answering a question does not automatically pass it. Re-review receives the outstanding questions alongside your accumulated context, including after a restart.
 4. Continue through all five phases. Choose `approve` only after you have inspected the outputs.
 5. Choose `export` for a local report. A Notion-imported session can also use `publish`.
 
