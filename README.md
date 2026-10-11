@@ -1,6 +1,6 @@
 # 🪔 diyalamp
 
-**Defensible writing in Notion, with AI.**
+**Defensible writing with AI in Notion.**
 
 AI that helps you test your argument and sharpen your writing. In Notion. With evidence, explicit assumptions, and edits you approve.
 

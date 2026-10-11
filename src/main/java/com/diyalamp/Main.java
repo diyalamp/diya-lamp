@@ -7,7 +7,7 @@ import java.nio.file.Path;
 public final class Main {
     public static void main(String[] args) throws Exception {
         if (args.length == 0 || args[0].equals("--help")) {
-            System.out.println("diya lamp — Write a decision you can defend.\nUsage: java -jar diya-lamp.jar prepare <draft.txt>\nPrepares a local review packet; does not call AI or connect to Notion.");
+            System.out.println("🪔 diyalamp — Defensible writing with AI in Notion.\nUsage: java -jar diya-lamp.jar prepare <draft.txt>\nPrepares a local review packet; does not call AI or connect to Notion.");
             return;
         }
         if (args.length != 2 || !args[0].equals("prepare")) {

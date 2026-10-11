@@ -1,6 +1,6 @@
 # 🪔 diyalamp implementation plan
 
-Defensible writing in Notion, with AI. Java 21, a local CLI first, a simple desktop setup later.
+Defensible writing with AI in Notion. Java 21, a local CLI first, a simple desktop setup later.
 
 ## Product workflow
 
