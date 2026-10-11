@@ -11,8 +11,8 @@ Open-source code is separate from operating data: never commit service credentia
 ## Customer journey
 
 1. Create a diyalamp account and select a monthly plan with an explicit review allowance.
-2. Complete Stripe-hosted Checkout, providing a card and paying the initial subscription invoice. No free trial or unpaid review access in the initial offering.
-3. Confirm payment on the server, then connect Notion through a public OAuth connection and duplicate the writing template.
+2. Start with two lifetime free review journeys, or complete Stripe-hosted Checkout and pay the initial subscription invoice for a paid plan. Proposed Personal allowance: twenty journeys monthly. Enterprise allowance is contracted. Prices and limits require cost validation.
+3. Confirm free-credit eligibility or paid access on the server, then connect Notion through a public OAuth connection and duplicate the writing template.
 4. Write a rough draft and request the next phase through a native Notion button that changes an action property. Custom slash commands are not a promised feature.
 5. Receive questions and review results in Notion, provide evidence there, and explicitly approve the reviewed version after all five phases.
 
@@ -28,11 +28,15 @@ A successful Checkout redirect, saved card, or connected Notion workspace alone 
 
 ## Mandatory billing gate
 
-Every AI phase request requires authenticated tenant ownership, a valid Notion connection, confirmed paid subscription access for the current period, and available usage allowance. Enforce this in the backend when accepting the request and again immediately before a worker sends any content to AI. Never trust a Notion property or browser-provided subscription status as billing authority.
+Every AI phase request requires authenticated tenant ownership, a valid Notion connection, and either remaining free access or confirmed paid subscription access for the current period. New journeys consume a journey credit; funded journeys may resume without another credit, subject to the per-journey limits. A journey includes all five phases and up to two follow-up passes per phase for drafts of up to 5,000 words; these are proposed limits, not yet implemented. Enforce this in the backend when accepting the request and again immediately before a worker sends any content to AI. Never trust a Notion property or browser-provided subscription status as billing authority.
 
 Verify Stripe webhook signatures, deduplicate events, and reconcile authoritative subscription/invoice state rather than assuming event arrival order. Grant access after confirmed initial payment; renew the paid access period after confirmed renewal payment. Block new AI work when payment fails, collection is paused, the subscription expires, or billing state is unknown. Cancellation at period end can retain already-paid access until that period expires. Preserve existing drafts and results when blocked, and show a billing recovery link in Notion.
 
 Reserve usage atomically before AI calls, bind each request to a tenant and draft version, and prevent duplicate requests from consuming allowance twice. A failed or interrupted call can still incur provider cost: record attempts and define refund/retry rules explicitly. Reconcile uncertain provider results rather than blindly retrying. Work already sent to AI cannot be retroactively stopped by a later payment failure.
+
+## Implementation status
+
+The pure Java `ReviewAccess` policy now checks tenant ownership, Notion connection state, free-credit eligibility, confirmed paid periods, billing failures/pauses, and remaining journey allowance. Already funded journeys can resume without a second credit. Unit tests verify period boundaries and denial cases. This policy is not yet connected to a hosted endpoint, Stripe, a durable quota reservation, or an AI worker; the local CLI remains a development interface. A caller must load all policy inputs from authoritative server state.
 
 ## Delivery slices and proof
 

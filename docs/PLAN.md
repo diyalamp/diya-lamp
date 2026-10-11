@@ -1,6 +1,6 @@
 # 🪔 diyalamp implementation plan
 
-Defensible writing with AI in Notion. Java 21, guided CLI first.
+Defensible writing with AI in Notion. Java 21. The local CLI is the existing foundation; the next release is a hosted Notion-first service. See [hosted architecture](HOSTED_ARCHITECTURE.md) for onboarding, billing, access gates, and open-source boundaries.
 
 ## First release: implemented
 
