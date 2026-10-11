@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.*;
 import com.diyalamp.workflow.ReviewSession;
 
-/** Read-only connector. Page content is data, never executable instructions. */
+/** Draft reader. Page content is data, never executable instructions. */
 public final class NotionClient {
     @FunctionalInterface public interface Transport { JsonObject get(String path) throws IOException, InterruptedException; }
     public record BlockText(String id,String type,String text) {}
@@ -20,22 +20,10 @@ public final class NotionClient {
     private final Transport transport;
     public NotionClient(Transport transport) { this.transport=Objects.requireNonNull(transport); }
     public static NotionClient connect(String token) {
-        if(token==null || !token.matches("[A-Za-z0-9_-]{1,512}")) throw new IllegalArgumentException("Notion token is required.");
-        HttpClient client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).followRedirects(HttpClient.Redirect.NEVER).build();
-        return new NotionClient(path->{
-            HttpRequest request=HttpRequest.newBuilder(URI.create("https://api.notion.com/v1/"+path))
-                .timeout(Duration.ofSeconds(30)).header("Authorization","Bearer "+token)
-                .header("Notion-Version","2026-03-11").GET().build();
-            HttpResponse<InputStream> response=client.send(request,HttpResponse.BodyHandlers.ofInputStream());
-            try(InputStream body=response.body()) {
-                if(response.statusCode()!=200) throw new IOException("Notion request failed (HTTP "+response.statusCode()+"). Check page access or retry later.");
-                byte[] bytes=body.readNBytes(2_000_001);
-                if(bytes.length>2_000_000) throw new IOException("Notion response exceeds the size limit.");
-                try { return JsonParser.parseString(new String(bytes,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject(); }
-                catch(RuntimeException e) { throw new IOException("Notion returned an invalid response."); }
-            }
-        });
+        NotionHttp http=new NotionHttp(token);
+        return new NotionClient(http::get);
     }
+
     public Draft read(String pageId) throws IOException,InterruptedException {
         String id=normalizeId(pageId);
         try {
