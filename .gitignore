@@ -8,3 +8,5 @@ build/
 
 .diyalamp/
 *.review.properties
+*.publication.properties
+*.review.properties.lock

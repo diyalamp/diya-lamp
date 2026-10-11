@@ -15,3 +15,5 @@ java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalam
 java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalamp.ai.HostedReviewerTest
 
 java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalamp.notion.NotionPublisherTest
+
+java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalamp.workflow.ConnectedWorkflowTest

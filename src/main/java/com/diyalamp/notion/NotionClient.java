@@ -39,6 +39,16 @@ public final class NotionClient {
             return draft;
         } catch(JsonParseException | IllegalStateException | NullPointerException e) { throw new IOException("Notion returned an incomplete response."); }
     }
+    public void verifyPublication(String pageId,String parentId,String reference) throws IOException,InterruptedException {
+        JsonObject page=transport.get("pages/"+normalizeId(pageId));
+        try {
+            String parent=page.getAsJsonObject("parent").get("page_id").getAsString();
+            StringBuilder title=new StringBuilder();
+            for(JsonElement item:page.getAsJsonObject("properties").getAsJsonObject("title").getAsJsonArray("title")) title.append(item.getAsJsonObject().get("plain_text").getAsString());
+            if(flag(page,"archived") || flag(page,"in_trash") || !normalizeId(parent).equals(normalizeId(parentId)) || !title.toString().equals("diyalamp review "+reference))
+                throw new IOException("Page does not match the pending publication's parent and reference.");
+        } catch(RuntimeException e) { throw new IOException("Could not verify the publication page."); }
+    }
     private void walk(String id,List<BlockText> output,int depth,Set<String> visited) throws IOException,InterruptedException {
         if(depth>20 || !visited.add(id)) throw new IOException("Draft nesting exceeds the supported limit.");
         String cursor=null; Set<String> cursors=new HashSet<>(); int pages=0;
