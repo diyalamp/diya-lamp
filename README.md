@@ -1,8 +1,10 @@
 # 🪔 diyalamp
 
-**Defensible writing with AI in Notion.**
+**Find your flow. Write a better essay.**
 
-A defined, sequential workflow for turning a rough draft into an examined argument. AI guides five phases; you supply missing evidence and explicitly approve the result. Notion holds your draft and the published review. A review supports judgment; it does not certify truth.
+The open-source Java review engine behind diyalamp’s AI-assisted essay-writing direction. Inspect the prompts, phase contracts, evidence gates, and author-approval rules. The hosted writing app, accounts, billing, and customer data are separate private services.
+
+The current engine and CLI were built around defensible recommendations and argument review. Broader essay feedback on clarity, structure, and voice is the product direction, not a completed capability. Notion is an optional existing connector, not a requirement of the future writing app. AI feedback supports the author’s judgment; it does not certify truth or guarantee improvement.
 
 ## What works today
 
