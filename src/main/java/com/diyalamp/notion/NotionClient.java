@@ -45,7 +45,7 @@ public final class NotionClient {
             String parent=page.getAsJsonObject("parent").get("page_id").getAsString();
             StringBuilder title=new StringBuilder();
             for(JsonElement item:page.getAsJsonObject("properties").getAsJsonObject("title").getAsJsonArray("title")) title.append(item.getAsJsonObject().get("plain_text").getAsString());
-            if(flag(page,"archived") || flag(page,"in_trash") || !normalizeId(parent).equals(normalizeId(parentId)) || !title.toString().equals("diyalamp review "+reference))
+            if(flag(page,"archived") || flag(page,"in_trash") || !normalizeId(parent).equals(normalizeId(parentId)) || !title.toString().equals("🪔 diyalamp review "+reference))
                 throw new IOException("Page does not match the pending publication's parent and reference.");
         } catch(RuntimeException e) { throw new IOException("Could not verify the publication page."); }
     }

@@ -19,7 +19,7 @@ public final class NotionPublisherTest {
         AtomicInteger writes=new AtomicInteger();
         NotionPublisher publisher=new NotionPublisher(reader,(path,body)->{
             writes.incrementAndGet(); check(path.equals("pages")); check(body.getAsJsonObject("parent").get("page_id").getAsString().equals(page));
-            check(body.getAsJsonArray("children").size()>0); JsonObject response=new JsonObject(); response.addProperty("id",child); return response;
+            check(body.getAsJsonArray("children").size()>0); check(body.getAsJsonArray("children").get(0).getAsJsonObject().get("type").getAsString().equals("heading_1")); JsonObject response=new JsonObject(); response.addProperty("id",child); return response;
         });
         try { publisher.publish(new NotionPublisher.Source(page,"changed",s.fingerprint()),s,page,ref); throw new AssertionError(); } catch(IllegalStateException expected) { }
         check(writes.get()==0);

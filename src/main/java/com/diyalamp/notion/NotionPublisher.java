@@ -34,15 +34,22 @@ public final class NotionPublisher {
         if(session.state()!=ReviewSession.State.READY) throw new IllegalStateException("Author approval is required before publishing.");
         if(reference==null || !reference.matches("[a-f0-9]{16}")) throw new IllegalArgumentException("Invalid publication reference.");
         JsonObject parent=new JsonObject(); parent.addProperty("page_id",NotionClient.normalizeId(parentId));
-        JsonObject title=new JsonObject(); title.add("title",rich("diyalamp review "+reference));
+        JsonObject title=new JsonObject(); title.add("title",rich("🪔 diyalamp review "+reference));
         JsonObject properties=new JsonObject(); properties.add("title",title);
         JsonArray children=new JsonArray();
         String report=ReviewReport.render(session);
-        for(int start=0;start<report.length();) {
-            int end=Math.min(start+1900,report.length());
-            if(end<report.length() && Character.isHighSurrogate(report.charAt(end-1))) end--;
-            JsonObject paragraph=new JsonObject(); paragraph.add("rich_text",rich(report.substring(start,end)));
-            JsonObject block=new JsonObject(); block.addProperty("object","block"); block.addProperty("type","paragraph"); block.add("paragraph",paragraph); children.add(block); start=end;
+        for(String section:report.split("\\n\\n")) {
+            if(section.isBlank()) continue;
+            String type="paragraph",content=section;
+            if(section.startsWith("### ")) { type="heading_3"; content=section.substring(4); }
+            else if(section.startsWith("## ")) { type="heading_2"; content=section.substring(3); }
+            else if(section.startsWith("# ")) { type="heading_1"; content=section.substring(2); }
+            for(int start=0;start<content.length();) {
+                int end=Math.min(start+1900,content.length());
+                if(end<content.length() && Character.isHighSurrogate(content.charAt(end-1))) end--;
+                JsonObject value=new JsonObject(); value.add("rich_text",rich(content.substring(start,end)));
+                JsonObject block=new JsonObject(); block.addProperty("object","block"); block.addProperty("type",type); block.add(type,value); children.add(block); start=end;
+            }
         }
         if(children.size()>100) throw new IllegalArgumentException("Review is too large for one safe publication. Export it locally instead.");
         JsonObject request=new JsonObject(); request.add("parent",parent); request.add("properties",properties); request.add("children",children);
