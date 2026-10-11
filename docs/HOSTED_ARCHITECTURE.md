@@ -4,7 +4,9 @@ Status: approved product direction, not implemented or live validated.
 
 ## Product and repository
 
-Keep the Java backend, setup website, Notion connector, payment integration, database migrations, tests, and deployment templates in the public diyalamp/diyalamp repository. Reuse the existing five-phase engine and approval gates. The CLI remains a development tool, not the customer's interface.
+The direction is an open writing engine plus a private managed-service control plane. Public engine scope: five-phase workflow, review prompts, evidence and approval rules, document formats, model adapters, Notion connector, tests, and self-hosting instructions. Private service scope: hosted accounts and onboarding, subscriptions, usage metering, job orchestration, tenant administration, admin dashboards, and production operations. The public website can remain public marketing code.
+
+A separate private cloud repository is the recommended destination for control-plane implementation. It has not been created yet. Do not publish additional hosted billing or administration code while this boundary is being settled. The initial entitlement policy was already published before this direction changed; it remains available in public history. Removing a file later cannot make previously published code private.
 
 Open-source code is separate from operating data: never commit service credentials, OAuth tokens, customer drafts, payment details, production configuration values, or database exports. Stripe collects and stores card details; diyalamp stores customer/subscription identifiers and entitlement state, never card numbers or security codes.
 

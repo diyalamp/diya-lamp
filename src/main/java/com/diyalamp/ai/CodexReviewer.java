@@ -6,7 +6,7 @@ import java.io.*;
 import java.util.*;
 
 /** Codex produces a phase artifact; Java owns state and approval. */
-public final class CodexReviewer {
+public final class CodexReviewer implements PhaseReviewer {
     @FunctionalInterface public interface Runner { String run(String prompt,String schema,String model) throws IOException,InterruptedException; }
     private final Runner runner;
     private final String model;
