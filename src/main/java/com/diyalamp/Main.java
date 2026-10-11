@@ -1,6 +1,7 @@
 package com.diyalamp;
 
 import com.diyalamp.workflow.*;
+import com.diyalamp.notion.NotionClient;
 import java.nio.file.*;
 import java.util.*;
 
@@ -15,7 +16,32 @@ public final class Main {
             System.out.println("🪔 diyalamp | Defensible writing with AI in Notion.\n"
                 + "start <draft.txt> <session.review.properties>\nstatus <session>\n"
                 + "record <session> <result.txt> [questions.txt]\nrespond <session> <context.txt>\napprove <session>\n"
-                + "Local workflow only. Phase results are supplied by you; no AI or Notion connection yet."); return;
+                + "notion-read <page-id> <new-output-directory>\nPhase results are supplied by you; no AI review yet."); return;
+        }
+        if(args[0].equals("notion-read") && args.length==3) {
+            String id=NotionClient.normalizeId(args[1]);
+            Path directory=Path.of(args[2]).toAbsolutePath().normalize();
+            if(Files.exists(directory)) throw new IllegalArgumentException("Choose a new output directory.");
+            java.io.Console console=System.console();
+            if(console==null) throw new IllegalStateException("Run in a terminal for the hidden Notion token prompt.");
+            char[] secret=console.readPassword("Notion integration token (hidden): ");
+            if(secret==null) throw new IllegalStateException("Token entry cancelled.");
+            NotionClient.Draft draft;
+            try { draft=NotionClient.connect(new String(secret)).read(id); }
+            finally { Arrays.fill(secret,'\0'); }
+            Files.createDirectory(directory);
+            Files.setPosixFilePermissions(directory,java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));
+            Path source=directory.resolve("draft.txt"); Files.writeString(source,draft.text());
+            Properties references=new Properties(); references.setProperty("page",draft.pageId());
+            references.setProperty("revision",draft.revision()); references.setProperty("fingerprint",draft.fingerprint());
+            for(int i=0;i<draft.blocks().size();i++) {
+                references.setProperty("block."+i+".id",draft.blocks().get(i).id());
+                references.setProperty("block."+i+".type",draft.blocks().get(i).type());
+            }
+            try(var writer=Files.newBufferedWriter(directory.resolve("source.properties"))) { references.store(writer,"Notion source attribution"); }
+            SessionStore.Saved saved=new SessionStore.Saved(source,new ReviewSession(draft.text()));
+            SessionStore.save(directory.resolve("session.review.properties"),saved);
+            show(saved.review()); System.out.println("Notion draft imported locally. No Notion changes were made."); return;
         }
         if(args[0].equals("start") && args.length==3) {
             Path target=Path.of(args[2]);
