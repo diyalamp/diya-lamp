@@ -5,3 +5,6 @@ build/
 *.pem
 .DS_Store
 .idea/
+
+.diyalamp/
+*.review.properties
