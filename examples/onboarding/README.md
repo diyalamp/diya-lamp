@@ -17,13 +17,13 @@ Start with `draft.txt` only. Keep `author-context.txt` separate until the review
 ```sh
 mkdir -p .diyalamp
 java -jar build/diya-lamp.jar start examples/onboarding/draft.txt .diyalamp/onboarding.review.properties
-java -jar build/diya-lamp.jar review .diyalamp/onboarding.review.properties <claude-model-id>
+java -jar build/diya-lamp.jar review .diyalamp/onboarding.review.properties
 java -jar build/diya-lamp.jar status .diyalamp/onboarding.review.properties
 # When the reviewer requests context:
 java -jar build/diya-lamp.jar respond .diyalamp/onboarding.review.properties examples/onboarding/author-context.txt
-java -jar build/diya-lamp.jar review .diyalamp/onboarding.review.properties <claude-model-id>
+java -jar build/diya-lamp.jar review .diyalamp/onboarding.review.properties
 # Repeat review/respond as needed, then explicitly approve:
 java -jar build/diya-lamp.jar approve .diyalamp/onboarding.review.properties
 ```
 
-Each review requires consent and a hidden API key prompt; provider charges apply. The app records review outputs but does not rewrite the source. Do not edit `draft.txt` mid-session: a changed source needs a new review. Ready means the author approved the reviewed source, not that the software proved the proposal true or implemented its suggested revision.
+Sign in with `codex login` first. Each review requires consent and uses your saved Codex sign-in; its account usage and limits apply. No AI key is requested by diyalamp. The app records review outputs but does not rewrite the source. Do not edit `draft.txt` mid-session: a changed source needs a new review. Ready means the author approved the reviewed source, not that the software proved the proposal true or implemented its suggested revision.

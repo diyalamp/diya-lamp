@@ -6,9 +6,9 @@ A defined, sequential workflow for turning a rough draft into an examined argume
 
 ## What works today
 
-This first CLI release imports a selected Notion page, runs one review phase at a time with the Claude API, pauses for author context, persists sessions, checks the source before approval, exports a readable report, and publishes an approved review as a separate Notion page. A guided terminal menu brings these actions together. It never automatically overwrites the source draft.
+This first CLI release imports a selected Notion page, runs one review phase at a time with Codex, pauses for author context, persists sessions, checks the source before approval, exports a readable report, and publishes an approved review as a separate Notion page. A guided terminal menu brings these actions together. It never automatically overwrites the source draft.
 
-The full path is tested with offline Notion and AI fixtures. Live account validation has not been performed. This is an unsigned CLI release, not a signed desktop application or a Notion-native plugin. OpenAI support and public Notion OAuth are future work.
+The full path is tested with offline Notion and AI fixtures. Live account validation has not been performed. This is an unsigned CLI release, not a signed desktop application or a Notion-native plugin. Public Notion OAuth is future work. Codex is the only AI reviewer.
 
 ## Quick start: fictional demo
 
@@ -18,10 +18,17 @@ Install **JDK 21 or newer**, and ensure `java` and `javac` are on your path, or 
 sh build.sh
 sh run.sh --help
 sh run.sh start examples/onboarding/draft.txt .diyalamp/onboarding.review.properties
-sh run.sh guide .diyalamp/onboarding.review.properties <claude-model-id>
+sh run.sh guide .diyalamp/onboarding.review.properties
 ```
 
-Choose a model available in your Anthropic API account. Enter the API key into the hidden prompt, never into a command or a Notion page. Claude chat subscriptions do not include this app's API billing.
+Install a current [Codex CLI](https://learn.chatgpt.com/docs/developer-commands?surface=cli) and sign in once:
+
+```sh
+codex login
+codex login status
+```
+
+The application reuses Codex's saved sign-in and never reads or stores its credentials. ChatGPT sign-in uses your eligible plan's Codex access and limits; API-key sign-in follows API billing. No separate AI key is requested by diyalamp. Review and guide commands use Codex's default model, or accept an optional Codex model ID as the final argument.
 
 In the guided menu:
 
@@ -31,7 +38,7 @@ In the guided menu:
 4. Continue through all five phases. Choose `approve` only after you have inspected the outputs.
 5. Choose `export` for a local report. A Notion-imported session can also use `publish`.
 
-Keys are reused in memory while the guided menu is open; quitting clears its credential cache. Every AI request still requires consent. Choose `keys` to clear the cache and replace an incorrect credential. On restart, enter the key again. No key is stored on disk.
+Notion tokens are reused in memory while the guided menu is open; quitting clears that cache. Choose `keys` to replace a Notion token. Codex manages its own sign-in separately. Every AI request still requires consent; no AI key is entered into diyalamp.
 
 The [fictional walkthrough](examples/onboarding/README.md) explains the intended learning points. Start with its draft alone, then supply relevant parts of the separate evidence packet when asked. Model outputs vary; the walkthrough is not an expected-output script.
 
@@ -41,7 +48,7 @@ Create a Notion integration with **read content** and **insert content** capabil
 
 ```sh
 sh run.sh notion-read <draft-page-id> .diyalamp/notion-draft
-sh run.sh guide .diyalamp/notion-draft/session.review.properties <claude-model-id>
+sh run.sh guide .diyalamp/notion-draft/session.review.properties
 ```
 
 Supply a Notion page ID, not its full URL. The importer requests the token in a hidden terminal prompt and creates a new private local directory. It reads paragraphs, headings, lists, checkboxes, toggles, quotes, callouts, code, and table rows, follows pagination and nested blocks, and records block references. Unsupported media blocks produce an error instead of being silently omitted. The page revision is checked before and after the import.
@@ -85,8 +92,8 @@ These sources inform our workflow; the combined product is not a scientifically 
 | --- | --- |
 | `start <draft.txt> <new-session>` | Create a local review snapshot |
 | `status <session>` | Inspect state, results, questions, and next phase |
-| `guide <session> <claude-model-id>` | Open the interactive menu |
-| `review <session> <claude-model-id>` | Request and validate one hosted review |
+| `guide <session> [codex-model-id]` | Open the interactive menu |
+| `review <session> [codex-model-id]` | Request and validate one hosted review |
 | `record <session> <result.txt> [questions.txt]` | Supply a manual result; one question per line |
 | `respond <session> <context.txt>` | Supply author context without skipping a phase |
 | `approve <session>` | Approve the unchanged source after all phases |
@@ -101,8 +108,8 @@ These sources inform our workflow; the combined product is not a scientifically 
 - Never put secrets in Notion pages, source code, examples, command arguments, logs, or Git. The app collects them only in hidden terminal prompts.
 - Runtime sessions contain private text and context. Keep them in `.diyalamp/`, which is ignored by Git. Export reports there too. Local source files outside that directory remain your responsibility.
 - The app uses owner-only permissions where supported. Session snapshots are saved atomically, and a process lock prevents concurrent commands from overwriting one session. It is not an encrypted vault.
-- An AI request sends the selected draft, completed reviews, and author context to Anthropic. There are no agent tools or automatic source edits. Document text is treated as untrusted input, but prompt-injection resistance and factual accuracy are not guaranteed.
-- Each AI call has a 4,096-output-token ceiling and a 90-second timeout. This is not a total dollar budget. Refused, interrupted, malformed, or wrong-phase responses do not advance the phase. Failed or discarded requests can still incur charges.
+- An AI request sends the selected draft, completed reviews, and author context through Codex. Runs use a private temporary working directory, read-only sandboxing, ephemeral sessions, and disabled shell, browser, app, and plugin features. User configuration is not loaded, but saved Codex authentication is reused. The app never automatically applies source edits. Document text is treated as untrusted input, but prompt-injection resistance and factual accuracy are not guaranteed.
+- Each Codex run has a five-minute application deadline, a structured output schema, and application-side result size limits. There is no fixed output-token or dollar cap. Failed, interrupted, malformed, or wrong-phase responses do not advance the phase. Failed or discarded runs can still consume Codex usage. Draft input travels through stdin rather than process arguments; temporary schema/result files are removed afterward. Ephemeral mode avoids saving Codex session files, but is not a promise of zero provider-side retention.
 - Network requests do not automatically retry. Notion rate-limit errors show a wait interval when provided. A failed publication keeps its receipt for reconciliation. Cancellation before a request leaves the session unchanged; quitting the terminal interrupts ongoing work, but remote work may already have happened.
 
 ## Build, verify, and package
@@ -126,15 +133,15 @@ The build downloads Gson 2.14.0 with a pinned SHA-256. Tests cover phase order, 
 | Notion access failure | Share both pages with the integration and enable read/insert capabilities |
 | Source changed | Import or start a new session; completed results belong to the original snapshot |
 | Missing evidence | Supply context, then re-review the current phase |
-| Model/access/billing error | Confirm your API account and model ID; use `keys` to replace credentials |
-| Malformed or truncated review | Session remains unchanged; a deliberate retry can cost another API request |
+| Model/access/billing error | Run `codex login status`, check Codex usage and the optional model ID; use `codex login` if needed |
+| Malformed or truncated review | Session remains unchanged; a deliberate retry consumes more Codex usage |
 | Pending publication | Inspect the destination and use `publication-resolve`, never blindly repeat the write |
 | Session busy | Close the other command; an abandoned lock file itself does not keep an OS lock |
 
 ## Architecture and next work
 
-Core Java CLI → five-phase workflow → Claude reviewer / Notion connector → review report. State and approval rules belong to the application, not the prompt. Sessions use a versioned local format; incompatible or damaged snapshots are rejected.
+Core Java CLI → five-phase workflow → Codex reviewer / Notion connector → review report. State and approval rules belong to the application, not the prompt. Sessions use a versioned local format; incompatible or damaged snapshots are rejected.
 
-See [the implementation plan](docs/PLAN.md) for completed release scope, live validation, and later work. OS credential storage, public OAuth, OpenAI support, per-edit application, larger publication batches, and signed desktop distribution are not included in this release.
+See [the implementation plan](docs/PLAN.md) for completed release scope, live validation, and later work. Notion OS credential storage, public OAuth, per-edit application, larger publication batches, and signed desktop distribution are not included in this release.
 
-[Website](https://diyalamp.github.io/) · [Claude Messages API](https://platform.claude.com/docs/en/api/messages/create) · [Notion page API](https://developers.notion.com/reference/post-page) · [Notion block API](https://developers.notion.com/reference/get-block-children) · [Dependency notices](THIRD_PARTY_NOTICES.md)
+[Website](https://diyalamp.github.io/) · [Codex non-interactive execution](https://learn.chatgpt.com/docs/non-interactive-mode) · [Notion page API](https://developers.notion.com/reference/post-page) · [Notion block API](https://developers.notion.com/reference/get-block-children) · [Dependency notices](THIRD_PARTY_NOTICES.md)
