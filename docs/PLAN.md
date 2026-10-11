@@ -1,39 +1,42 @@
 # 🪔 diyalamp implementation plan
 
-Defensible writing with AI in Notion. Core Java 21, a local CLI first, a simple desktop setup later.
+Defensible writing in Notion, with AI. Java 21, a local CLI first, a simple desktop setup later.
 
-## First usable slice
+## Product workflow
 
-1. Build and packaging: repeatable compilation, JSON support, a runnable JAR, offline integration tests.
-2. Notion connector: explicit page selection, paginated block reads, nested text, source block attribution, fail clearly on unsupported content, detect changes during a read.
-3. Review engine: Claude Messages API first, explicit model configuration, claims/evidence/assumptions/objections/questions/revisions as structured output. Drafts are untrusted data, not instructions. Reject malformed or truncated output.
-4. Local review artifact: source ID, content fingerprint, review results. Only the selected draft is sent to the provider; require an explicit CLI consent flag.
-5. Publication: separate child review page, never automatic source edits. Re-fetch the source and reject stale reviews; require an explicit publish flag. Do not retry ambiguous writes automatically.
-6. Setup documentation and release checks: keys through environment variables initially; no secrets in flags, Notion pages, examples, logs, or Git. Offline mock services verify the workflow; live validation needs the user's integration credentials and a selected test page.
+The input is a rough draft, not a filled template. The five review phases are:
 
-Each verified step is a small commit pushed independently. The initial CLI is a development milestone, not the finished product.
+1. Argument map: claims, grounds, connecting assumptions, qualifications, and gaps.
+2. Stress test: strongest objections, alternatives, and a premortem.
+3. Assumption check: questions about certainty, framing, and missing context.
+4. Decision frame: alternatives, reversibility, success measures, review dates, and conditions for changing course.
+5. Final structure: recommendation first, grouped support, evidence, uncertainties, and proposed revision.
 
-## Following milestones
+Each phase produces an inspectable artifact. Missing evidence pauses the workflow for author input, then the phase is reviewed again. Completing five phases yields Awaiting approval. Only the author can mark the draft Ready. Editing the source invalidates the completed review.
 
-- Hidden setup prompts and OS credential-store integration; package for macOS with one launcher.
-- Public Notion OAuth connection and a clear page permissions flow for other users.
-- OpenAI adapter behind the same review interface; provider/model selection, bounded usage, timeouts, and sanitized errors.
-- Notion-native review status and evidence responses, explicit proposed edits, per-edit author approval, revision history.
-- Robust block coverage and clear limitations for tables, synced blocks, embeds, child pages, and large documents.
-- Local persistence, job resume, deduplication, idempotent publication, cancellation, rate limits, and audit trail.
-- Accessibility, onboarding with a sample page, signing/release automation, clean-install testing, security review.
+## Atomic implementation milestones
+
+- Core workflow: typed phases and states, explicit evidence gates, source fingerprint, approval guard, offline tests.
+- Local CLI: start a session, inspect the current phase, record a phase result, supply context, and approve. Persist review artifacts locally, outside tracked files. This milestone is a workflow engine, not an AI reviewer.
+- Notion adapter: explicit page selection, pagination and nested text, block attribution, source-change detection, separate review page publication. No automatic source edits.
+- Hosted AI adapter: structured results for each phase, configurable model, bounded output, malformed/refused-response handling. Explicit consent to transmit the selected draft; no automatic provider spending.
+- Connected demo: rough draft → five reviewed artifacts with author responses → author approval → separate Notion review page. Verify offline first; live validation requires the user's credentials and chosen test page.
+- Setup: hidden credential prompts and OS credential storage; Notion authorization independent of AI authorization. Package and sign a macOS launcher.
+
+Push each verified milestone separately. Do not claim the connected product works before it has been demonstrated.
+
+## Subsequent work
+
+Public Notion OAuth, provider choice, retries for safe reads, rate limits, cancellation, job recovery, idempotent publication, per-edit approval, source version history, expanded block coverage, accessibility, release automation, clean-install checks, and security review.
 
 ## Correctness and privacy
 
-No automatic source mutation. No claim that an AI review proves truth. Model suggestions must distinguish quoted evidence from inferred assumptions. No source text is sent without explicit selection and consent. No credentials are bundled; chat subscriptions and API billing are separate. Notion does not provide a transactional compare-and-create operation: pre-publication checks reduce stale publication but do not remove the race. Review pages retain a source fingerprint so that limitation is visible.
+Never bundle keys or put them in Notion, examples, command arguments, logs, or Git. Use fake credentials in tests. Runtime artifacts can contain private drafts and must stay outside version control. API billing is separate from chat subscriptions.
 
-## Acceptance demo
-
-Read one authorized draft → show claims and missing evidence → save the review locally → preview it → explicitly publish a child review page. Changing the draft invalidates publication. Missing credentials, denied permissions, provider failure, malformed review, and duplicate publication must fail clearly without leaking secrets or editing the original.
+An AI review cannot prove truth or diagnose a writer's bias. Questions about evidence return to the author. Prompts and external documents are untrusted data. Notion's read-then-create check is not a transaction; disclose the race and retain source fingerprints.
 
 ## References
 
 - https://developers.notion.com/reference/get-block-children
 - https://developers.notion.com/reference/post-page
 - https://platform.claude.com/docs/en/api/messages/create
-- https://github.com/google/gson

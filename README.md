@@ -1,6 +1,6 @@
-# 🪔 diya lamp
+# 🪔 diyalamp
 
-**Write a decision you can defend.**
+**Defensible writing in Notion, with AI.**
 
 AI that helps you test your argument and sharpen your writing. In Notion. With evidence, explicit assumptions, and edits you approve.
 
@@ -19,6 +19,10 @@ sh build.sh
 java -jar build/diya-lamp.jar --help
 java -jar build/diya-lamp.jar prepare examples/draft.txt
 ```
+
+## Five review phases
+
+A rough draft moves through argument mapping, stress-testing, assumption checking, decision framing, and final structure. Missing evidence returns to the author; completing the phases still requires author approval before Ready. See [the implementation plan](docs/PLAN.md).
 
 ## First connected milestone
 
