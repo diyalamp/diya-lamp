@@ -16,6 +16,11 @@ public final class Main {
         catch (Exception e) { System.err.println("Unable to complete command: " + e.getMessage()); System.exit(2); }
     }
     public static void run(String[] args) throws Exception {
+        if(args.length==3 && args[0].equals("start")) {
+            Path target=Path.of(args[2]).toAbsolutePath(); Files.createDirectories(target.getParent());
+            try(SessionLock ignored=new SessionLock(target)) { execute(args); }
+            return;
+        }
         Set<String> locked=Set.of("status","review","record","respond","approve","export","notion-publish","publication-status","publication-resolve");
         if(args.length>=2 && locked.contains(args[0])) {
             if(!Files.isRegularFile(Path.of(args[1]))) throw new IllegalArgumentException("Session file not found. Use start or notion-read first.");
