@@ -155,3 +155,38 @@ See [the implementation plan](docs/PLAN.md) for completed release scope, live va
 Offsets are zero-based UTF-16 (start inclusive, end exclusive), matching Java and JavaScript strings. The exact quote, valid Unicode boundaries, source IDs, limits, strict field types, and SHA-256 draft fingerprint are validated before returning a result. `requireCurrent` rejects a result after any draft change. Supplied excerpts are author-provided material, not independently verified evidence; URLs are not fetched. A client still needs to validate editor-position mapping and separately require author approval before applying any proposal.
 
 The interface and adversarial fixtures pass offline tests. It is not yet connected to browser review, hosted tenant admission, or live model validation. No new paid calls are made by the tests.
+
+### Revision-aware evidence review receipts
+
+`com.diyalamp.ai.EvidenceReview` is an offline lifecycle primitive for exact claim
+and source anchors. It records that a review occurred, **not** that a claim is
+true, supported, safe to publish, or approved by its author.
+
+1. Build a `Draft` with an application-assigned revision and stable editor block
+   IDs, plus `Source` records containing immutable revisions and supplied excerpts.
+2. Call `begin` with an exact UTF-16 claim anchor, source passage anchors, and all
+   block IDs whose context the review depends on. Keep this request with the job.
+3. On completion call `Request.complete(currentDraft, currentSources)`. Any input
+   change while the reviewer ran rejects the response, including unrelated edits.
+4. After subsequent committed edits call `Receipt.reconcile` and persist the
+   returned receipt. Unchanged claim/context blocks retain the receipt even if an
+   unrelated block changes. Any edit inside a dependency block, source revision
+   or excerpt change, deletion, or duplicate matching quote requires review again.
+5. Invalidation is sticky, including after a text revert. Only a newly completed
+   review can replace it. Never discard the returned invalidated receipt.
+
+Duplicate quotes are handled conservatively even with exact offsets. Stable IDs
+are supplied by the editor, not inferred by searching text. Reordering blocks
+alone preserves checks; callers must invalidate or include additional context
+when order affects meaning. The caller is responsible for complete dependencies:
+this primitive cannot discover semantic dependencies or detect a new contradictory
+claim elsewhere in a document. Within a referenced source, any change invalidates
+its checks, even if the quoted sentence remains identical. Additional unrelated
+sources do not invalidate an already completed receipt.
+
+Receipts expose the original draft revision, claim and source anchors, source
+versions, context IDs, and explicit invalidation reasons. This milestone does not
+add persistence, HTTP endpoints, live model calls, semantic source assessment,
+or automatic editor mutation. `DocumentReviewAgent` remains a separate proposal
+contract; its findings must be deliberately mapped to stable blocks and source
+anchors by an integration, never treated as approval.
