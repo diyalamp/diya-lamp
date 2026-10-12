@@ -79,6 +79,20 @@ public final class DocumentReviewAgent {
                 throw new IllegalStateException("Review sources changed. Re-examine the supplied evidence.");
         }
     }
+    /** Immutable validated prompt/schema pair. Contains private text; never log or serialize it.
+     * Preparation performs no provider call. The model remains a server-side agent setting.
+     */
+    public static final class PreparedReview {
+        private final Snapshot snapshot;
+        private final List<Evidence> supplied;
+        private final boolean grounded;
+        private final String prompt, schema;
+        private PreparedReview(Snapshot snapshot, List<Evidence> supplied, boolean grounded, String prompt, String schema) {
+            this.snapshot = snapshot; this.supplied = List.copyOf(supplied); this.grounded = grounded;
+            this.prompt = prompt; this.schema = schema;
+        }
+        @Override public String toString() { return "Prepared document review [content redacted]"; }
+    }
     private final CodexReviewer.Runner runner;
     private final String model;
     public DocumentReviewAgent(String model, CodexReviewer.Runner runner) {
@@ -86,15 +100,25 @@ public final class DocumentReviewAgent {
         this.model = model; this.runner = Objects.requireNonNull(runner);
     }
     public Result review(Snapshot snapshot, List<Evidence> supplied) throws IOException, InterruptedException {
-        return reviewInternal(snapshot, supplied, false).review();
+        return reviewInternal(prepare(snapshot, supplied, false)).review();
     }
     /** Opt-in contract requiring a checked verbatim source passage for each cited source ID.
      * A valid quote establishes location only; the model's reasoning can still be incorrect.
      */
     public GroundedResult reviewGrounded(Snapshot snapshot, List<Evidence> supplied) throws IOException, InterruptedException {
-        return reviewInternal(snapshot, supplied, true);
+        return reviewGrounded(prepareGrounded(snapshot, supplied));
     }
-    private GroundedResult reviewInternal(Snapshot snapshot, List<Evidence> supplied, boolean grounded) throws IOException, InterruptedException {
+    /** Validates the complete escaped prompt before admission, billing, or remote work. */
+    public static PreparedReview prepareGrounded(Snapshot snapshot, List<Evidence> supplied) throws IOException {
+        return prepare(snapshot, supplied, true);
+    }
+    /** Runs the exact immutable input that passed preflight; callers still own freshness and admission. */
+    public GroundedResult reviewGrounded(PreparedReview prepared) throws IOException, InterruptedException {
+        Objects.requireNonNull(prepared);
+        if (!prepared.grounded) throw new IllegalArgumentException("A grounded prepared input is required.");
+        return reviewInternal(prepared);
+    }
+    private static PreparedReview prepare(Snapshot snapshot, List<Evidence> supplied, boolean grounded) throws IOException {
         Objects.requireNonNull(snapshot); supplied = List.copyOf(supplied);
         if (supplied.size() > 10 || supplied.stream().mapToInt(e -> e.excerpt().length()).sum() > 40_000
                 || supplied.stream().map(Evidence::id).distinct().count() != supplied.size()) throw new IllegalArgumentException("Evidence exceeds limits or repeats an ID.");
@@ -117,7 +141,12 @@ public final class DocumentReviewAgent {
                 + "Quote enough context for inspection; an exact quotation is not proof of support.";
         prompt += "\nInput:\n" + input;
         if (prompt.length() > 100_000) throw new IOException("Document context exceeds the hosted limit.");
-        String raw = runner.run(prompt, grounded ? groundedSchema(snapshot.fingerprint()) : schema(snapshot.fingerprint()), model);
+        return new PreparedReview(snapshot, supplied, grounded, prompt,
+                grounded ? groundedSchema(snapshot.fingerprint()) : schema(snapshot.fingerprint()));
+    }
+    private GroundedResult reviewInternal(PreparedReview prepared) throws IOException, InterruptedException {
+        Snapshot snapshot = prepared.snapshot; List<Evidence> supplied = prepared.supplied; boolean grounded = prepared.grounded;
+        String raw = runner.run(prepared.prompt, prepared.schema, model);
         if (raw == null || raw.length() > 50_000) throw new IOException("Document review is missing or exceeds limits.");
         try {
             JsonObject value = ReviewJson.parse(raw).getAsJsonObject(); keys(value, "fingerprint", "findings", "alternative", "limitations");

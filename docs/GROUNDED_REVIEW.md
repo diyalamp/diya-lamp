@@ -148,3 +148,37 @@ included in the outward validation error.
 This closes a syntactic ambiguity; it does not establish resistance to all prompt
 injection or validate the truth of an otherwise well-formed response. Providers
 that return nonstandard JSON will now fail rather than being silently repaired.
+
+## Prepare exact input before reserving a review allowance
+
+A hosted integration must preflight the **serialized** prompt, not only the raw
+text lengths. A 49,000-character draft consisting of quote characters and a
+9,000-character excerpt satisfy their individual input limits, but JSON escaping
+pushes the complete prompt over its 100,000-character limit. Discovering this only
+after reserving allowance could debit a customer for a deterministic rejection
+that never reached a provider.
+
+Use the same preparation path as execution:
+
+```java
+var prepared = DocumentReviewAgent.prepareGrounded(snapshot, suppliedEvidence);
+// Only now perform the application's allowance and durable-attempt admission.
+var reviewed = agent.reviewGrounded(prepared);
+```
+
+`PreparedReview` holds the exact prompt, schema, immutable draft, and copied source
+list. It has no public constructor or payload getters, and its diagnostic string
+is redacted. Preparation uses no runner, credential, or network call. The existing
+`reviewGrounded(snapshot, evidence)` overload delegates through the same path, and
+the legacy non-grounded method keeps its existing contract.
+
+Keep the prepared object server-side and do not serialize or log it: it contains
+private writing and excerpts. It is not a single-use token and does not enforce
+idempotency. The caller must still recheck workspace version, admission, and
+attempt ownership/deadline before dispatch, and validate source/job versions
+before accepting results. Preparing successfully is not authorization to spend.
+
+Regression tests confirm that the escaping example rejects with zero provider
+calls, changing the caller's source list after preparation cannot change execution,
+and prepared/convenience paths produce identical prompt and schema bytes as Java
+strings. These checks use only synthetic inputs and a fixture runner.

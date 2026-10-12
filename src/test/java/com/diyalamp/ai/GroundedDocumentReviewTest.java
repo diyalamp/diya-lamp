@@ -16,6 +16,7 @@ public final class GroundedDocumentReviewTest {
             new Evidence("other", "Traffic also declined."));
 
     public static void main(String[] args) throws Exception {
+        preparedInput();
         JsonObject valid = valid();
         AtomicInteger calls = new AtomicInteger();
         GroundedResult result = new DocumentReviewAgent(null, (prompt, schema, model) -> {
@@ -77,6 +78,29 @@ public final class GroundedDocumentReviewTest {
         try { new DocumentReviewAgent(null, (p,s,m) -> valid.toString()).review(SNAPSHOT, SOURCES); throw new AssertionError("legacy silently accepted new fields"); }
         catch (IOException expected) { }
         System.out.println("PASS: exact source passages, complete source-set freshness, immutable results, malformed citations and legacy contract isolation.");
+    }
+    private static void preparedInput() throws Exception {
+        List<Evidence> mutableSources = new ArrayList<>(SOURCES);
+        PreparedReview prepared = prepareGrounded(SNAPSHOT, mutableSources);
+        mutableSources.clear();
+        check(prepared.toString().equals("Prepared document review [content redacted]"), "prepared diagnostics redact content");
+        AtomicInteger calls = new AtomicInteger();
+        List<String> prompts = new ArrayList<>(), schemas = new ArrayList<>();
+        DocumentReviewAgent agent = new DocumentReviewAgent(null, (prompt,schema,model) -> {
+            calls.incrementAndGet(); prompts.add(prompt); schemas.add(schema); return valid().toString();
+        });
+        Snapshot oversized = Snapshot.of("\"".repeat(49_000));
+        List<Evidence> escapingSources = List.of(new Evidence("s", "a".repeat(9_000)));
+        try { prepareGrounded(oversized, escapingSources); throw new AssertionError("Escaped prompt accepted"); }
+        catch (IOException expected) { check(expected.getMessage().equals("Document context exceeds the hosted limit."), "safe preflight error"); }
+        try { agent.reviewGrounded(oversized, escapingSources); throw new AssertionError("Convenience path skipped preparation"); }
+        catch (IOException expected) { }
+        check(calls.get() == 0, "invalid escaped input spends no provider call");
+        agent.reviewGrounded(prepared).requireCurrent(DRAFT, SOURCES);
+        check(calls.get() == 1, "prepared input still has original source snapshot after caller mutation");
+        agent.reviewGrounded(SNAPSHOT, SOURCES);
+        check(prompts.get(0).equals(prompts.get(1)) && schemas.get(0).equals(schemas.get(1)), "preflight and direct paths prepare identical wire input");
+        check(prompts.get(0).contains(SOURCES.get(1).excerpt()), "all supplied context retained");
     }
     private static JsonObject valid() {
         JsonObject result = new JsonObject(); result.addProperty("fingerprint", SNAPSHOT.fingerprint()); result.add("alternative", JsonNull.INSTANCE);

@@ -239,3 +239,9 @@ quotation validity, counts missing and abstained outputs, and reports per-case
 confusion and false alarms. The paired baseline/grounded protocol requires label
 adjudication and controlled runs before making model-quality claims. No live
 results are included, and the scorer makes no model or network calls.
+
+Hosted callers can use `DocumentReviewAgent.prepareGrounded(snapshot, evidence)`
+before reserving review allowance, then pass the immutable `PreparedReview` to
+`agent.reviewGrounded(prepared)`. This validates the full escaped prompt without a
+provider call and executes that same input later. Keep it private; freshness,
+attempt ownership, idempotency, and payment authorization remain the caller's job.
