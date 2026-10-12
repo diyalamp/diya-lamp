@@ -29,3 +29,5 @@ java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalam
 java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalamp.ai.GroundedDocumentReviewTest
 
 java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalamp.ai.ReviewJsonTest
+
+java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalamp.ai.SemanticSupportEvaluationTest

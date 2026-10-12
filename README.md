@@ -229,3 +229,13 @@ valid Unicode, and bounded nesting before field validation. Malformed output is
 rejected without exposing raw model text in the validation error or advancing the
 review. This hardening does not establish factual accuracy or complete prompt
 injection resistance.
+
+### Offline semantic-support evaluation
+
+The [evaluation starter](examples/evaluation/README.md) includes 12 fictional
+claim/source cases with provisional support, contradiction, and insufficient-context
+labels. Its offline Java scorer keeps semantic-label accuracy separate from exact
+quotation validity, counts missing and abstained outputs, and reports per-case
+confusion and false alarms. The paired baseline/grounded protocol requires label
+adjudication and controlled runs before making model-quality claims. No live
+results are included, and the scorer makes no model or network calls.
