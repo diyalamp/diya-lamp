@@ -34,6 +34,18 @@ public final class EvidenceReview {
         }
     }
     public enum Reason { CLAIM_OR_CONTEXT_CHANGED, SOURCE_CHANGED, AMBIGUOUS_ANCHOR }
+    public enum DependencyKind { BLOCK, SOURCE }
+    /** Identifies a dependency observed to invalidate this review, without copying its private text.
+     * This is historical invalidation, not necessarily a difference in the latest draft after undo.
+     */
+    public record DependencyChange(Reason reason, DependencyKind kind, String id) {
+        public DependencyChange {
+            Objects.requireNonNull(reason); Objects.requireNonNull(kind); identifier(id);
+            if (reason == Reason.CLAIM_OR_CONTEXT_CHANGED && kind != DependencyKind.BLOCK
+                    || reason == Reason.SOURCE_CHANGED && kind != DependencyKind.SOURCE)
+                throw new IllegalArgumentException("Invalid dependency kind for reason.");
+        }
+    }
 
     /** Captures the complete input presented for a review. A receipt cannot accept a stale response. */
     public static final class Request {
@@ -65,20 +77,20 @@ public final class EvidenceReview {
         /** Caller records a completed human or agent review; this does not mean the claim is supported. */
         public Receipt complete(Draft current, List<Source> currentSources) {
             if (!draft.equals(current) || !sources.equals(sourceMap(currentSources))) throw new IllegalStateException("Review response is stale.");
-            return new Receipt(this, reasons(current, currentSources));
+            return new Receipt(this, changes(current, currentSources));
         }
-        private Set<Reason> reasons(Draft current, List<Source> currentSources) {
-            EnumSet<Reason> result = EnumSet.noneOf(Reason.class);
+        private Set<DependencyChange> changes(Draft current, List<Source> currentSources) {
+            Set<DependencyChange> result = new HashSet<>();
             Map<String, Block> before = blockMap(draft), after = blockMap(current);
             Set<String> dependencies = new HashSet<>(contextIds); dependencies.add(claim.blockId());
-            for (String id : dependencies) if (!Objects.equals(before.get(id), after.get(id))) result.add(Reason.CLAIM_OR_CONTEXT_CHANGED);
+            for (String id : dependencies) if (!Objects.equals(before.get(id), after.get(id))) result.add(new DependencyChange(Reason.CLAIM_OR_CONTEXT_CHANGED, DependencyKind.BLOCK, id));
             Block block = after.get(claim.blockId());
-            if (block != null && ambiguous(block.text(), claim.quote())) result.add(Reason.AMBIGUOUS_ANCHOR);
+            if (block != null && ambiguous(block.text(), claim.quote())) result.add(new DependencyChange(Reason.AMBIGUOUS_ANCHOR, DependencyKind.BLOCK, claim.blockId()));
             Map<String, Source> latest = sourceMap(currentSources);
             for (SourceAnchor anchor : evidence) {
                 Source source = latest.get(anchor.sourceId());
-                if (!Objects.equals(sources.get(anchor.sourceId()), source)) result.add(Reason.SOURCE_CHANGED);
-                if (source != null && ambiguous(source.excerpt(), anchor.quote())) result.add(Reason.AMBIGUOUS_ANCHOR);
+                if (!Objects.equals(sources.get(anchor.sourceId()), source)) result.add(new DependencyChange(Reason.SOURCE_CHANGED, DependencyKind.SOURCE, anchor.sourceId()));
+                if (source != null && ambiguous(source.excerpt(), anchor.quote())) result.add(new DependencyChange(Reason.AMBIGUOUS_ANCHOR, DependencyKind.SOURCE, anchor.sourceId()));
             }
             return Set.copyOf(result);
         }
@@ -86,18 +98,26 @@ public final class EvidenceReview {
     /** Immutable and monotonically invalidated: reverting text cannot silently restore an old review. */
     public static final class Receipt {
         private final Request request;
-        private final Set<Reason> reasons;
-        private Receipt(Request request, Set<Reason> reasons) { this.request = request; this.reasons = Set.copyOf(reasons); }
+        private final Set<DependencyChange> changes;
+        private Receipt(Request request, Set<DependencyChange> changes) { this.request = request; this.changes = Set.copyOf(changes); }
         public String reviewedRevision() { return request.reviewedRevision(); }
         public Map<String, Source> reviewedSources() { return request.reviewedSources(); }
         public Set<String> contextBlockIds() { return request.contextBlockIds(); }
         public Anchor claim() { return request.claim(); }
         public List<SourceAnchor> evidence() { return request.evidence(); }
-        public boolean requiresReview() { return !reasons.isEmpty(); }
-        public Set<Reason> reasons() { return reasons; }
+        public boolean requiresReview() { return !changes.isEmpty(); }
+        public Set<Reason> reasons() {
+            EnumSet<Reason> reasons = EnumSet.noneOf(Reason.class);
+            changes.forEach(change -> reasons.add(change.reason()));
+            return Set.copyOf(reasons);
+        }
+        /** All observed invalidating dependencies since completion; IDs need not still exist.
+         * Block and source IDs are separate namespaces. No ordering is promised.
+         */
+        public Set<DependencyChange> dependencyChanges() { return changes; }
         /** Persist the returned receipt after each committed edit. */
         public Receipt reconcile(Draft current, List<Source> sources) {
-            Set<Reason> next = new HashSet<>(reasons); next.addAll(request.reasons(current, sources));
+            Set<DependencyChange> next = new HashSet<>(changes); next.addAll(request.changes(current, sources));
             return new Receipt(request, next);
         }
     }

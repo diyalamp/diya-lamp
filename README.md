@@ -190,3 +190,11 @@ add persistence, HTTP endpoints, live model calls, semantic source assessment,
 or automatic editor mutation. `DocumentReviewAgent` remains a separate proposal
 contract; its findings must be deliberately mapped to stable blocks and source
 anchors by an integration, never treated as approval.
+
+`Receipt.dependencyChanges()` additionally identifies the block or source behind
+each invalidation reason. These immutable details accumulate across edits and
+undo, so they are historical observations rather than a current diff. Removed
+IDs remain in the record, and block/source namespaces are distinct. Callers can
+use them to explain why a check reopened without another model call. The hosted
+interface does not yet display these details. See the [research and evaluation
+note](docs/REVIEW_RESEARCH.md) for primary sources, tested invariants, and limits.
