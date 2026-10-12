@@ -147,3 +147,11 @@ Core Java CLI → five-phase workflow → Codex reviewer / Notion connector → 
 See [the implementation plan](docs/PLAN.md) for completed release scope, live validation, and later work. Notion OS credential storage, public OAuth, per-edit application, larger publication batches, and signed desktop distribution are not included in this release.
 
 [Website](https://diyalamp.github.io/) · [Codex non-interactive execution](https://learn.chatgpt.com/docs/non-interactive-mode) · [Notion page API](https://developers.notion.com/reference/post-page) · [Notion block API](https://developers.notion.com/reference/get-block-children) · [Dependency notices](THIRD_PARTY_NOTICES.md)
+
+## Document-centered agent contract
+
+`DocumentReviewAgent` is a separate structured review interface for the proposed browser experience. It returns up to three exact passage anchors, consequential findings, optional replacement wording, evidence labels, an alternative, and limitations. Its runner can reuse the existing Codex transport or a server-held provider adapter. It does not mutate, approve, publish, or certify a document.
+
+Offsets are zero-based UTF-16 (start inclusive, end exclusive), matching Java and JavaScript strings. The exact quote, valid Unicode boundaries, source IDs, limits, strict field types, and SHA-256 draft fingerprint are validated before returning a result. `requireCurrent` rejects a result after any draft change. Supplied excerpts are author-provided material, not independently verified evidence; URLs are not fetched. A client still needs to validate editor-position mapping and separately require author approval before applying any proposal.
+
+The interface and adversarial fixtures pass offline tests. It is not yet connected to browser review, hosted tenant admission, or live model validation. No new paid calls are made by the tests.
