@@ -198,3 +198,28 @@ IDs remain in the record, and block/source namespaces are distinct. Callers can
 use them to explain why a check reopened without another model call. The hosted
 interface does not yet display these details. See the [research and evaluation
 note](docs/REVIEW_RESEARCH.md) for primary sources, tested invariants, and limits.
+
+### Exact source passages in AI proposals
+
+`DocumentReviewAgent.reviewGrounded(snapshot, suppliedEvidence)` is an opt-in
+extension of `review`. Each source-backed finding must identify an exact excerpt
+passage with `source_id`, UTF-16 `start`/`end`, and verbatim `quote`. The engine
+rejects invented text, unknown or unmatched source IDs, invalid boundaries,
+duplicate passages, and missing passages for cited sources. Other finding kinds
+must return an empty passage list. The original `review`, `Finding`, and `Result`
+contracts remain available unchanged.
+
+The returned `GroundedResult.review()` exposes the existing proposal result;
+`passagesByFinding()` provides immutable source anchors keyed by finding ID. Call
+`requireCurrent(currentDraft, currentEvidence)` before showing a result as current.
+It rejects changes to **any** supplied excerpt, including uncited context, plus
+added or removed sources. Source list ordering alone is irrelevant. An application
+must additionally compare immutable source revisions and job versions to detect
+an edit followed by an undo while the job was running.
+
+An exact quotation proves only that the text occurs at that location in the
+supplied excerpt. It does not prove relevance, logical support, source authenticity,
+or completeness. The method never fetches sources, edits the draft, approves a
+claim, or automatically retries a failed response. These are offline contract
+tests; model quality and the hosted integration remain to be evaluated. See the
+[grounded review research note](docs/GROUNDED_REVIEW.md).
