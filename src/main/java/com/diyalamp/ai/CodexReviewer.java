@@ -35,7 +35,7 @@ public final class CodexReviewer implements PhaseReviewer {
         String raw=runner.run(prompt,schema(phase),model);
         if(raw==null || raw.length()>250_000) throw new IOException("Codex response exceeds the size limit or is missing.");
         try {
-            JsonObject result=JsonParser.parseString(raw).getAsJsonObject();
+            JsonObject result=ReviewJson.parse(raw).getAsJsonObject();
             if(!result.keySet().equals(Set.of("phase","output","questions")) || !phase.name().equals(string(result.get("phase")))) throw new IllegalArgumentException();
             List<String> questions=new ArrayList<>(); for(JsonElement q:result.getAsJsonArray("questions")) questions.add(string(q));
             return new PhaseResult(phase,string(result.get("output")),questions);

@@ -114,3 +114,37 @@ and cost. Do not report accuracy from these synthetic contract tests. Human
 labels and held-out cases are needed for a credible semantic comparison. More
 review agents should be introduced only if they improve those measured outcomes
 within an explicit cost allowance.
+
+## Follow-on finding: unambiguous model output parsing
+
+The next audit reproduced a parsing gap in the original reviewer: repeating the
+`fingerprint` member in an otherwise valid response was accepted. Tree parsing
+had already collapsed the duplicate before the closed field-set check ran.
+
+[RFC 8259, section 4](https://www.rfc-editor.org/rfc/rfc8259#section-4) recommends
+unique object member names and explains that receivers differ when duplicates
+occur. [Gson's official troubleshooting guide](https://google.github.io/gson/Troubleshooting.html#malformed-json-not-rejected)
+explains its legacy lenient parsing and recommends explicit strictness. Our
+application policy is stricter than simply accepting a JSON object: every member
+name must occur exactly once after escape decoding.
+
+`ReviewJson` now validates model output in a bounded streaming pass before tree
+construction. Phase reviews, ordinary document reviews, and grounded document
+reviews all use it. It rejects duplicate keys at any nesting level (including
+escaped aliases), comments, unquoted names, single-quoted strings, trailing
+content, malformed numbers, invalid Unicode surrogate sequences, and nesting
+over 16 levels. Existing response-size limits still apply. The second tree pass
+preserves number spelling so the existing integer-offset validator does not
+silently normalize `3.0` or `3e0` into an accepted integer.
+
+The regression first failed against the old reviewer, then passed with the new
+boundary. The complete offline suite now contains 12 passing test programs.
+Dedicated tests cover nested duplicates, escaped keys, 1,000-level malicious
+nesting, valid boundary nesting, parser error sanitization, and number-lexeme
+preservation. Phase tests verify that invalid responses do not advance the
+workflow. No raw output or parser exception containing document paths/text is
+included in the outward validation error.
+
+This closes a syntactic ambiguity; it does not establish resistance to all prompt
+injection or validate the truth of an otherwise well-formed response. Providers
+that return nonstandard JSON will now fail rather than being silently repaired.

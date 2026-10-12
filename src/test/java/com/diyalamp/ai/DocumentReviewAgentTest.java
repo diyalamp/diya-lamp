@@ -37,6 +37,7 @@ public final class DocumentReviewAgentTest {
         JsonObject excess = valid.deepCopy(); for(int i=0;i<3;i++) excess.getAsJsonArray("findings").add(excess.getAsJsonArray("findings").get(0).deepCopy()); reject(excess.toString(),snapshot,evidence);
         JsonObject duplicate = valid.deepCopy(); duplicate.getAsJsonArray("findings").add(duplicate.getAsJsonArray("findings").get(0).deepCopy()); reject(duplicate.toString(),snapshot,evidence);
         reject("not JSON",snapshot,evidence);
+        reject(valid.toString().replace("\"fingerprint\":", "\"fingerprint\":\"" + snapshot.fingerprint() + "\",\"fingerprint\":"),snapshot,evidence);
         JsonObject empty = valid.deepCopy(); empty.add("findings",new JsonArray()); check(new DocumentReviewAgent(null,(p,s,m)->empty.toString()).review(snapshot,evidence).findings().isEmpty());
         try { agent.review(snapshot,List.of(evidence.get(0),evidence.get(0))); throw new AssertionError(); } catch(IllegalArgumentException expected) { }
         try { DocumentReviewAgent.Snapshot.of("Invalid " + (char)0xD800); throw new AssertionError(); } catch(IllegalArgumentException expected) { }

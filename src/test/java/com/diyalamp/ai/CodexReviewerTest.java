@@ -20,6 +20,12 @@ public final class CodexReviewerTest {
         for(String invalid:List.of("not JSON","{\"phase\":\"FINAL_STRUCTURE\",\"output\":\"Skip\",\"questions\":[]}","{\"phase\":\"ARGUMENT_MAP\",\"output\":4,\"questions\":[]}","{\"phase\":\"ARGUMENT_MAP\",\"output\":\"\",\"questions\":[]}")) {
             reject(new CodexReviewer("test-model",(p,j,m)->invalid),s);
         }
+        for (String malformed : List.of(
+                valid.replace("\"phase\":", "\"phase\":\"ARGUMENT_MAP\",\"phase\":"),
+                "/* comment */" + valid,
+                valid.replace("\"output\":\"Reviewed\"", "output:'Reviewed'"))) {
+            reject(new CodexReviewer(null, (p,j,m) -> malformed), s);
+        }
         reject(new CodexReviewer(null,(p,j,m)->{throw new IOException("Offline error");}),s);
         check(s.results().isEmpty()); s.submit(new CodexReviewer(null,(p,j,m)->valid).review(s)); check(s.results().size()==1);
         System.out.println("PASS: Codex structured result, evidence gate, default model, malformed/wrong phase output, and no mutation on errors.");

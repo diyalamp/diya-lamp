@@ -223,3 +223,9 @@ or completeness. The method never fetches sources, edits the draft, approves a
 claim, or automatically retries a failed response. These are offline contract
 tests; model quality and the hosted integration remain to be evaluated. See the
 [grounded review research note](docs/GROUNDED_REVIEW.md).
+
+All review output is parsed with strict JSON syntax, unique decoded object keys,
+valid Unicode, and bounded nesting before field validation. Malformed output is
+rejected without exposing raw model text in the validation error or advancing the
+review. This hardening does not establish factual accuracy or complete prompt
+injection resistance.

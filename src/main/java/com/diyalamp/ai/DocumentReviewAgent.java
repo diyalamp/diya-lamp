@@ -120,7 +120,7 @@ public final class DocumentReviewAgent {
         String raw = runner.run(prompt, grounded ? groundedSchema(snapshot.fingerprint()) : schema(snapshot.fingerprint()), model);
         if (raw == null || raw.length() > 50_000) throw new IOException("Document review is missing or exceeds limits.");
         try {
-            JsonObject value = JsonParser.parseString(raw).getAsJsonObject(); keys(value, "fingerprint", "findings", "alternative", "limitations");
+            JsonObject value = ReviewJson.parse(raw).getAsJsonObject(); keys(value, "fingerprint", "findings", "alternative", "limitations");
             Set<String> known = new HashSet<>(); supplied.forEach(e -> known.add(e.id()));
             List<Finding> findings = new ArrayList<>();
             Map<String, List<SourcePassage>> passages = new HashMap<>();
