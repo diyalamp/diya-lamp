@@ -13,7 +13,7 @@ public final class EvidenceReview {
     public record Draft(String revision, List<Block> blocks) {
         public Draft {
             identifier(revision); blocks = List.copyOf(blocks);
-            if (blocks.isEmpty() || blocks.size() > 100 || blocks.stream().mapToInt(b -> b.text().length()).sum() > 50_000
+            if (blocks.size() > 100 || blocks.stream().mapToInt(b -> b.text().length()).sum() > 50_000
                     || blocks.stream().map(Block::id).distinct().count() != blocks.size()) throw new IllegalArgumentException("Invalid draft blocks.");
         }
     }

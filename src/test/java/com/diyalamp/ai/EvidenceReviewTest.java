@@ -41,6 +41,10 @@ public final class EvidenceReviewTest {
         rejects(() -> begin(original, SOURCES, new Anchor("claim", 0, 10, "Ten people"), Set.of("missing"), List.of(new SourceAnchor("survey", 0, 10, "Ten people"))), "unknown dependency");
         rejects(() -> new Draft("d8", List.of(new Block("same", "one"), new Block("same", "two"))), "duplicate block IDs");
         check(!request(changed).complete(changed, SOURCES).requiresReview(), "new explicit review replaces invalid receipt");
+        Draft blank = new Draft("empty", List.of());
+        check(blank.blocks().isEmpty(), "blank editor is a valid draft");
+        check(checked.reconcile(blank, SOURCES).requiresReview(), "deleting all writing invalidates old receipts");
+        rejects(() -> request(blank), "blank draft cannot receive a fabricated claim review");
         System.out.println("EvidenceReviewTest passed");
     }
     private static void check(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
