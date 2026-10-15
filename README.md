@@ -1,109 +1,74 @@
 # 🪔 Diya Lamp
 
-Coordination for long-running AI workflows. Java 21. Apache 2.0.
+An open-source browser agent. Java 21. Bring your own model. Run it yourself.
 
-Eight workers want the same task. One gets it. That worker disappears, a
-replacement takes over, and the original eventually wakes up.
+The browser clicks **Submit**. The connection drops before the response arrives.
 
-The original worker’s next write should fail.
+Did it work? Should the agent click again?
 
-That is the first problem Diya Lamp tackles: keeping independent workers from
-trampling each other’s progress. The current core uses SQL transactions to track
-ownership, checkpoints and the decisions that belong to them.
+Diya Lamp starts at that awkward boundary. A model proposes the next move. A
+browser adapter carries it out. The runtime keeps track of what was approved,
+what was attempted and what still needs checking.
 
-## What’s in the box
+## What's here
 
-`JdbcTaskCoordinator` is a small CockroachDB-backed Java library.
+The browser-agent core is an early prototype, with two replaceable interfaces:
 
-| When this happens | The core does this |
-| --- | --- |
-| Workers race for a task | Grants one current claim in a serializable transaction. |
-| A worker stops renewing its lease | Allows a replacement to claim the task and read the saved checkpoint. |
-| The old worker wakes up | Rejects its writes using the ownership generation. |
-| A checkpoint changes | Invalidates the approval attached to the previous revision. |
-| History recording fails | Rolls back the task change in the same transaction. |
-| A commit response disappears | Propagates the uncertainty so the caller can inspect state before retrying. |
+- **Model:** read the current observation; propose one action or stop.
+- **Browser:** observe the page; execute a typed, observation-bound action.
 
-Records are keyed by workspace, workflow and task. History is ordered and paged.
-Only known serialization aborts during transaction work or commit are retried,
-with a fixed attempt limit. An error while closing a connection after commit
-doesn’t get to replay the write.
+The Java loop requires approval before each action, saves dispatch intent first,
+rejects outdated observations and stops on uncertain outcomes. Local snapshots
+preserve pending work and the step budget across restarts.
+
+There is no working browser driver or model-provider integration yet. The tests
+use a fake browser. This is the core being built, not a finished automation app.
 
 ## Run the failure cases
 
-From a source checkout, with JDK 21 or newer:
+With JDK 21 or newer:
 
 ```sh
 sh test.sh
 ```
 
-The database suite needs a running, loopback-only development CockroachDB instance:
+The browser tests cover stale pages, mismatched approvals, competing dispatches,
+lost responses, failed snapshot writes and reopening a run without repeating an
+uncertain action. No model bill. No real account touched.
 
-```sh
-DIYALAMP_COORDINATION_TEST_URL='jdbc:postgresql://127.0.0.1:26257/defaultdb?sslmode=disable&user=root' \
-  sh coordination-test.sh
-```
+[Browser architecture and current limits](docs/BROWSER_AGENT.md)
 
-That fixture is for an insecure local development server. The test refuses cloud
-URLs and application database names. It creates a fresh database, exercises the
-race and failure cases, then removes only the database it created.
+## The boundaries
 
-The tests cover competing claims and checkpoint writes, expired owners, stale
-approvals, lost commit responses, connection-close failures and rollback when the
-history write fails. The JDBC test dependency is pinned and checksum-verified.
-No model calls are involved.
+Browser only. No desktop control or shell execution.
 
-## A few lines of Java
+Cloud-agnostic means the core doesn't depend on a cloud vendor. Model-agnostic
+means providers sit behind an interface; it doesn't mean every model is supported.
+Concrete adapters still have to be implemented and tested.
 
-```java
-import com.diyalamp.coordination.JdbcTaskCoordinator;
-import com.diyalamp.coordination.JdbcTaskCoordinator.TaskKey;
-import java.sql.DriverManager;
-import java.time.Duration;
+A successful browser command is not proof that the user's task succeeded. A
+model saying “done” isn't proof either. The next slice has to demonstrate the
+whole loop against a real browser fixture.
 
-var coordinator = new JdbcTaskCoordinator(
-    () -> DriverManager.getConnection(System.getenv("DIYALAMP_JDBC_URL")));
-coordinator.initialize();
+## Also in the repository
 
-var task = new TaskKey("lab", "driver-evaluation", "retry-path");
-coordinator.create(task, "Check the ambiguous-response case");
+The experimental SQL task coordinator handles ownership, fenced leases,
+checkpoints, versioned approvals and ordered history. It is available separately;
+it isn't connected to browser run storage yet.
 
-var lease = coordinator.claim(task, "build-worker", Duration.ofMinutes(2))
-    .orElseThrow();
-var checkpoint = coordinator.checkpoint(lease, 0, "Patch ready for review");
+[Task coordination API and database tests](docs/COORDINATION_CORE.md)
 
-// The application authenticates and authorizes the reviewer first.
-coordinator.approve(lease, checkpoint.revision(), "reviewer");
-coordinator.complete(lease, checkpoint.revision());
-```
+Earlier writing-review APIs and the terminal CLI are preserved in the
+[legacy documentation](docs/LEGACY_REVIEW_CLI.md).
 
-Change the checkpoint after approval and completion will be rejected until it is
-reviewed again. Replace the owner and its previous approval becomes stale too.
+## What's next
 
-[API details, invariants and test instructions](docs/COORDINATION_CORE.md)
+An isolated browser driver. One model adapter. One task that works end to end,
+including the part where something goes wrong.
 
-## Status
-
-Experimental. This milestone coordinates task records and their history.
-Scheduling, dependency-aware admission, model adapters and external tool delivery
-are still ahead. A completed database record does not prove an external action
-happened exactly once.
-
-The caller must authenticate workers and reviewers, authorize workspace access,
-and protect its database connection. Worker names and lease generations are
-coordination metadata, not credentials. The local tests don’t establish regional
-failover, production throughput or years-long operation.
-
-Next up: dependency-aware task admission, cancellation and approval revocation,
-then an action outbox with explicit handling for uncertain external outcomes.
-
-## Earlier work
-
-The earlier writing-review engine and terminal CLI are preserved. Their APIs,
-offline tests and packaging still work. The old product pitch lives in the
-[legacy CLI documentation](docs/LEGACY_REVIEW_CLI.md).
+A managed cloud and supervision console are planned after the self-hosted runtime
+works. Neither is available today.
 
 ## License
 
-[Apache License 2.0](LICENSE). Dependencies retain their own licenses; see
-[third-party notices](THIRD_PARTY_NOTICES.md).
+[Apache 2.0](LICENSE). [Dependency notices](THIRD_PARTY_NOTICES.md).

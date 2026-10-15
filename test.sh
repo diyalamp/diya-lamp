@@ -33,3 +33,5 @@ java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalam
 java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalamp.ai.SemanticSupportEvaluationTest
 
 java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalamp.coordination.CoordinationValidationTest
+
+java -cp build/classes:build/test-classes:build/deps/gson-2.14.0.jar com.diyalamp.browser.BrowserAgentTest
