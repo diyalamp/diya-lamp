@@ -1,4 +1,26 @@
-# 🪔 diyalamp
+# 🪔 Diya Lamp
+
+**Independent agents. Collective progress.**
+
+An open-source coordination layer for long-running AI workflows, written in Java.
+The first coordination milestone is `JdbcTaskCoordinator`: serializable task
+claims, database-clock leases, fencing generations, versioned checkpoints,
+approval invalidation and atomic event history backed by CockroachDB.
+
+See [the coordination core and runnable tests](docs/COORDINATION_CORE.md).
+From a source checkout, `sh test.sh` runs the offline suite. The opt-in `coordination-test.sh` verifies
+concurrency and failure behavior against a fresh disposable local CockroachDB
+database, with no model calls or cloud services.
+
+This is an experimental coordination primitive, not a finished multi-agent runtime.
+No hosted dashboard, sign-in, scheduler, autonomous agent execution, regional
+failover or years-long workload is delivered by this milestone. Application-level
+authentication and authorization remain the caller’s responsibility.
+
+## Legacy writing-review CLI
+
+The earlier review engine and its CLI remain available below for compatibility.
+Their writing-product positioning is historical, not the current project pitch.
 
 **Find your flow. Write a better essay.**
 
@@ -245,3 +267,8 @@ before reserving review allowance, then pass the immutable `PreparedReview` to
 `agent.reviewGrounded(prepared)`. This validates the full escaped prompt without a
 provider call and executes that same input later. Keep it private; freshness,
 attempt ownership, idempotency, and payment authorization remain the caller's job.
+
+## License
+
+Diya Lamp is licensed under [Apache License 2.0](LICENSE). Third-party components
+retain their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
