@@ -14,3 +14,7 @@ directory by `coordination-test.sh`, with a pinned SHA-256. It is not bundled in
 the CLI distribution. The driver and its dependencies retain the license files
 inside the upstream JAR, including `META-INF/LICENSE` and `META-INF/licenses/`.
 Project and upstream license: https://github.com/pgjdbc/pgjdbc
+
+## TypeScript workspace
+
+The new workspace uses Playwright (Apache-2.0), TypeScript (Apache-2.0), tsx (MIT), esbuild (MIT), and Node.js types (MIT). Exact dependency versions and integrity hashes are recorded in workspace/pnpm-lock.yaml. The Node.js runtime retains its upstream license. Inter is provided under the SIL Open Font License in workspace/public/fonts/Inter-LICENSE.txt. Dependencies retain their own upstream notices; they are not relicensed by this project.
