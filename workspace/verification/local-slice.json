@@ -15,7 +15,9 @@
     "manual_console_desktop": "passed",
     "manual_console_phone_width": 390,
     "phone_horizontal_overflow": false,
-    "manual_ui_recovery_after_app_restart": "passed"
+    "manual_ui_recovery_after_app_restart": "passed",
+    "fixture_submission_events_after_recovery": 3,
+    "deduplication_does_not_mask_replayed_submissions": "passed"
   },
   "limits": [
     "Fixed fixture task, deterministic responsibility workers; not autonomous LLM agents",

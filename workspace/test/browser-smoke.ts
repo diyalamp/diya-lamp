@@ -48,6 +48,8 @@ try{
  snapshot=await command('recover');
  assert.equal(snapshot.run.fixture.domainReady,true);assert.ok(Object.values(snapshot.run.tasks).every(task=>task.status==='done'));
  assert.equal(Object.keys(snapshot.run.fixture.receipts).length,3,'exactly three fixture effects across actual app/browser restart');
+ assert.equal(snapshot.events[0]?.seq,1,'smoke fixture history must be complete for the replay assertion');
+ assert.equal(snapshot.events.filter(event=>event.kind==='fixture.action').length,3,'recovery must not resubmit even an idempotently deduplicated fixture action');
  assert.ok(snapshot.events.some(event=>event.kind==='task.reconciled'));
  console.log('PASS: three actual browser tabs; dependencies, stale approval rejection, pause fencing, controlled human handoff, app/browser restart, forced process crash after a real browser effect, and receipt-based recovery without replay.');
 }finally{await stop();await rm(path,{recursive:true,force:true});}
