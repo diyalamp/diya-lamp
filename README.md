@@ -1,14 +1,12 @@
 # 🪔 diyalamp
 
-## New architecture proposal
+## New direction
 
 Your agents. Your models. Memory that stays.
 
-The [persistent-agent architecture](docs/PERSISTENT_AGENTS_ARCHITECTURE.md)
-describes the proposed Java orchestration core, replaceable models through
-OpenRouter, isolated CockroachDB memory, and a separate private managed console
-and account backend. It is a design, not an implemented cloud service.
-The [learning path](docs/LEARNING_PATH.md) explains what to study and build first.
+The proposed direction is a Java orchestration core, replaceable models through
+OpenRouter, isolated CockroachDB memory, and a separate managed console and
+account backend. It is a design, not an implemented cloud service.
 
 ## Existing working prototype
 
